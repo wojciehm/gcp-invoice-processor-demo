@@ -34,40 +34,102 @@ def create_kreditantrag_pdf(filename, invoice_id, total, tax, issuer):
                           'Die beigefuegten Seiten enthalten die Allgemeinen Geschaeftsbedingungen (AGB), '
                           'die Datenschutzbestimmungen und die detaillierte Kostenaufstellung.')
 
-    # Page 2: Terms and Conditions
+    # Page 2: Terms and Conditions - General & Interest Rates
     pdf.add_page()
     pdf.set_font('Arial', 'B', 14)
-    pdf.cell(0, 10, 'Allgemeine Geschaeftsbedingungen (AGB)', 0, 1)
+    pdf.cell(0, 10, 'Allgemeine Geschaeftsbedingungen (AGB) - Teil 1', 0, 1)
     pdf.set_font('Arial', '', 12)
-    for i in range(1, 15):
-        pdf.multi_cell(0, 10, f'§{i} Dies ist ein Standard-Textblock für die Allgemeinen Geschäftsbedingungen des Kreditvertrags. '
-                              f'Der Kreditnehmer verpflichtet sich, alle Bedingungen ordnungsgemäß zu erfüllen. '
-                              f'Zusätzliche Klausel zur Rückzahlung und Zinsanpassung.')
-        
-    # Page 3: Privacy Policy
-    pdf.add_page()
-    pdf.set_font('Arial', 'B', 14)
-    pdf.cell(0, 10, 'Datenschutzbestimmungen', 0, 1)
-    pdf.set_font('Arial', '', 12)
-    for i in range(1, 15):
-        pdf.multi_cell(0, 10, f'Absatz {i}: Wir nehmen den Schutz Ihrer persönlichen Daten sehr ernst. '
-                              f'Ihre Daten werden gemäß den geltenden DSGVO-Richtlinien verarbeitet und '
-                              f'nicht ohne Ihre ausdrückliche Zustimmung an Dritte weitergegeben.')
+    pdf.multi_cell(0, 6, "1. Geltungsbereich\nDiese Allgemeinen Geschäftsbedingungen gelten für alle Kreditverträge, die zwischen der "
+                         f"{issuer} (nachfolgend 'Kreditgeber' genannt) und dem Kreditnehmer abgeschlossen werden. "
+                         "Abweichende Vereinbarungen bedürfen der Schriftform.\n\n"
+                         "2. Zustandekommen des Vertrages\nDer Kreditvertrag kommt durch die beiderseitige Unterzeichnung "
+                         "oder durch die rechtsverbindliche elektronische Signatur beider Vertragsparteien zustande.\n\n"
+                         "3. Auszahlung des Darlehens\nDie Auszahlung des Darlehens erfolgt auf das vom Kreditnehmer "
+                         "angegebene Referenzkonto innerhalb von 3 Werktagen nach Vertragsabschluss und nach erfolgreicher "
+                         "Identifikationsprüfung (z.B. PostIdent oder VideoIdent).\n\n"
+                         "4. Verzinsung\nDer gebundene Sollzinssatz und der effektive Jahreszins ergeben sich aus dem "
+                         "Europäischen Standardinformationen für Verbraucherkredite (ESIS) Dokument. Der Zinssatz ist über "
+                         "die gesamte Laufzeit gebunden. Die Berechnung der Zinsen erfolgt nach der kaufmännischen Zinsmethode (30/360).\n\n"
+                         "5. Rückzahlung\nDas Darlehen ist in monatlichen Raten gemäß dem beigefügten Tilgungsplan zurückzuzahlen. "
+                         "Die Raten sind jeweils am 1. oder 15. eines jeden Monats fällig. Der Kreditnehmer ermächtigt den Kreditgeber, "
+                         "die Raten im SEPA-Basislastschriftverfahren vom angegebenen Referenzkonto einzuziehen.")
 
-    # Page 4: Signature Page
+    # Page 3: Terms and Conditions - Default & Termination
+    pdf.add_page()
+    pdf.set_font('Arial', 'B', 14)
+    pdf.cell(0, 10, 'Allgemeine Geschaeftsbedingungen (AGB) - Teil 2', 0, 1)
+    pdf.set_font('Arial', '', 12)
+    pdf.multi_cell(0, 6, "6. Sondertilgungen\nDer Kreditnehmer ist berechtigt, jederzeit Sondertilgungen auf das Darlehen zu leisten "
+                         "oder das Darlehen vorzeitig vollständig zurückzuzahlen. In diesem Fall kann der Kreditgeber eine "
+                         "Vorfälligkeitsentschädigung gemäß § 502 BGB verlangen, die jedoch auf maximal 1,0 % des vorzeitig "
+                         "zurückgezahlten Betrags begrenzt ist.\n\n"
+                         "7. Zahlungsverzug\nGerät der Kreditnehmer mit einer Rate ganz oder teilweise in Verzug, "
+                         "werden Verzugszinsen in Höhe von 5 Prozentpunkten über dem jeweiligen Basiszinssatz berechnet. "
+                         "Zudem können Mahngebühren in Höhe von 2,50 EUR pro Mahnschreiben anfallen.\n\n"
+                         "8. Kündigung durch den Kreditgeber\nDer Kreditgeber kann den Vertrag außerordentlich kündigen, "
+                         "wenn der Kreditnehmer mit mindestens zwei aufeinanderfolgenden Teilzahlungen ganz oder teilweise "
+                         "in Verzug ist und der Verzugsbetrag mindestens 10 % des Nennbetrags ausmacht (bzw. 5 % bei einer Laufzeit über 3 Jahren). "
+                         "Der Kreditgeber wird dem Kreditnehmer zuvor erfolglos eine zweiwöchige Frist zur Zahlung des rückständigen Betrags setzen.\n\n"
+                         "9. Sicherheiten\nZur Absicherung der Ansprüche aus diesem Kreditvertrag tritt der Kreditnehmer "
+                         "den pfändbaren Teil seiner gegenwärtigen und zukünftigen Lohn- und Gehaltsansprüche an den Kreditgeber ab (Lohnabtretung).")
+
+    # Page 4: Privacy Policy (Schufa & Data Handling)
+    pdf.add_page()
+    pdf.set_font('Arial', 'B', 14)
+    pdf.cell(0, 10, 'Datenschutzbestimmungen & SCHUFA-Hinweis', 0, 1)
+    pdf.set_font('Arial', '', 12)
+    pdf.multi_cell(0, 6, "1. Datenverarbeitung\nWir verarbeiten Ihre personenbezogenen Daten (z.B. Name, Adresse, Geburtsdatum, "
+                         "Einkommensverhältnisse, Kontodaten) zum Zwecke der Antragsprüfung, Vertragsabwicklung und Risikobewertung "
+                         "gemäß Art. 6 Abs. 1 lit. b DSGVO.\n\n"
+                         "2. SCHUFA-Klausel\nIch willige ein, dass der Kreditgeber vor Vertragsabschluss und während der Laufzeit "
+                         "Auskünfte über mich bei der SCHUFA Holding AG, Kormoranweg 5, 65201 Wiesbaden, einholt. Ferner willige ich ein, "
+                         "dass Daten über nicht vertragsgemäßes Verhalten (z.B. gekündigte Kredite, Zwangsvollstreckungsmaßnahmen) "
+                         "an die SCHUFA übermittelt werden. Die SCHUFA berechnet Wahrscheinlichkeitswerte (Scoring) unter "
+                         "Einbeziehung von Anschriftendaten.\n\n"
+                         "3. Weitergabe von Daten an Dritte\nEine Weitergabe Ihrer Daten an Dritte erfolgt nur, soweit dies "
+                         "zur Vertragsabwicklung erforderlich ist (z.B. an Druckdienstleister, Refinanzierungspartner oder "
+                         "Inkassounternehmen im Falle des Verzugs). Wir haben mit allen Dienstleistern Auftragsverarbeitungsverträge "
+                         "gemäß Art. 28 DSGVO geschlossen.\n\n"
+                         "4. Speicherdauer\nWir speichern Ihre Daten für die Dauer der Vertragslaufzeit. Nach Beendigung des "
+                         "Vertrages werden die Daten zur Erfüllung gesetzlicher Aufbewahrungsfristen (z.B. nach HGB und AO) "
+                         "für in der Regel 10 Jahre aufbewahrt.")
+
+    # Page 5: Right of Withdrawal (Widerrufsbelehrung)
+    pdf.add_page()
+    pdf.set_font('Arial', 'B', 14)
+    pdf.cell(0, 10, 'Widerrufsbelehrung', 0, 1)
+    pdf.set_font('Arial', '', 12)
+    pdf.multi_cell(0, 6, "Widerrufsrecht\nSie können Ihre Vertragserklärung innerhalb von 14 Tagen ohne Angabe von Gründen widerrufen. "
+                         "Die Frist beginnt nach Abschluss des Vertrags, aber erst, nachdem Sie alle Pflichtangaben "
+                         "nach § 492 Abs. 2 BGB erhalten haben. Zur Wahrung der Widerrufsfrist genügt die rechtzeitige Absendung des Widerrufs.\n\n"
+                         "Der Widerruf ist zu richten an:\n"
+                         f"{issuer}\nKundenservice - Abteilung Widerruf\nPostfach 12345, 10115 Berlin\nE-Mail: widerruf@{issuer.lower().replace(' ', '')}.de\n\n"
+                         "Widerrufsfolgen\nIm Falle eines wirksamen Widerrufs sind die beiderseits empfangenen Leistungen zurückzugewähren. "
+                         "Sie haben das Darlehen spätestens innerhalb von 30 Tagen nach Absendung der Widerrufserklärung zurückzuzahlen "
+                         "und für den Zeitraum der Kapitalüberlassung den vereinbarten Sollzins zu entrichten. Die Zinsen belaufen sich "
+                         "auf einen Betrag, der tagesgenau auf Basis des im Vertrag angegebenen Sollzinssatzes berechnet wird.")
+
+    # Page 6: Signature Page
     pdf.add_page()
     pdf.set_font('Arial', 'B', 14)
     pdf.cell(0, 10, 'Unterschriften', 0, 1)
     pdf.set_font('Arial', '', 12)
     pdf.ln(20)
     
-    pdf.cell(0, 10, 'Ich bestätige hiermit die Richtigkeit aller Angaben:', 0, 1)
+    pdf.cell(0, 10, 'Ich bestätige hiermit die Richtigkeit aller Angaben, sowie den Erhalt der', 0, 1)
+    pdf.cell(0, 10, 'Allgemeinen Geschäftsbedingungen und der Widerrufsbelehrung:', 0, 1)
     pdf.ln(30)
     
     pdf.cell(80, 10, '__________________________', 0, 0)
     pdf.cell(80, 10, '__________________________', 0, 1)
     pdf.cell(80, 10, 'Ort, Datum', 0, 0)
-    pdf.cell(80, 10, 'Unterschrift Kreditnehmer', 0, 1)
+    pdf.cell(80, 10, 'Unterschrift Kreditnehmer (Antragsteller 1)', 0, 1)
+    
+    pdf.ln(30)
+    pdf.cell(80, 10, '__________________________', 0, 0)
+    pdf.cell(80, 10, '__________________________', 0, 1)
+    pdf.cell(80, 10, 'Ort, Datum', 0, 0)
+    pdf.cell(80, 10, 'Unterschrift Mitantragsteller (falls zutreffend)', 0, 1)
     
     pdf.output(filename, 'F')
     print(f"Created {filename}")

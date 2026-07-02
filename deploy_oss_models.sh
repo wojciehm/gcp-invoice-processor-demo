@@ -46,6 +46,7 @@ EOF
             --cpu=8 \
             --memory=32Gi \
             --max-instances=3 \
+            --min-instances=0 \
             --concurrency=80 \
             --no-gpu-zonal-redundancy \
             --no-allow-unauthenticated \

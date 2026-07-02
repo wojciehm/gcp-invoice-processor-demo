@@ -28,6 +28,7 @@ gcloud run deploy os-ensemble-cr \
   --no-allow-unauthenticated \
   --port=8080 \
   --timeout=3600s \
+  --min-instances=0 \
   --set-env-vars="GEMMA_URL=https://gemma4-12b-884389213001.europe-west4.run.app,QWEN_URL=https://qwen3-6-27b-884389213001.europe-west4.run.app,MISTRAL_URL=https://mistral-7b-884389213001.europe-west4.run.app"
 
 echo "Deployment complete!"

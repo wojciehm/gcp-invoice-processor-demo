@@ -40,7 +40,7 @@ EOF
         echo "Deploying $SERVICE_NAME to Cloud Run..."
         gcloud run deploy $SERVICE_NAME \
             --image=$IMAGE_URI \
-            --region=$REGION \
+            --region=europe-west4 \
             --gpu=1 \
             --gpu-type=nvidia-l4 \
             --cpu=8 \

@@ -3,7 +3,7 @@
 set -e
 
 PROJECT_ID="wojciech-genai-demo"
-REGION="europe-west3"
+REGION="europe-west4"
 REPO_NAME="llm-repo"
 
 echo "Creating Artifact Registry repository $REPO_NAME..."
@@ -40,7 +40,7 @@ EOF
         echo "Deploying $SERVICE_NAME to Cloud Run..."
         gcloud run deploy $SERVICE_NAME \
             --image=$IMAGE_URI \
-            --region=europe-west4 \
+            --region=$REGION \
             --gpu=1 \
             --gpu-type=nvidia-l4 \
             --cpu=8 \

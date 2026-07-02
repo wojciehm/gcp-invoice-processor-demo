@@ -47,7 +47,7 @@ EOF
             --memory=32Gi \
             --max-instances=3 \
             --concurrency=80 \
-            --allow-unauthenticated \
+            --no-allow-unauthenticated \
             --port=8080 \
             --timeout=3600s
         

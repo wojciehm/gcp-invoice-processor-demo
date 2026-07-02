@@ -15,8 +15,8 @@ gcloud artifacts repositories create $REPO_NAME \
 MODELS=("gemma4:12b" "qwen3.6:27b" "mistral:7b")
 
 for MODEL in "${MODELS[@]}"; do
-    # Replace colon with dash for the service name
-    SERVICE_NAME=$(echo $MODEL | sed 's/:/-/g')
+    # Replace colon and dot with dash for the service name
+    SERVICE_NAME=$(echo $MODEL | sed 's/[:.]/-/g')
     IMAGE_URI="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${SERVICE_NAME}"
     
     echo "========================================="

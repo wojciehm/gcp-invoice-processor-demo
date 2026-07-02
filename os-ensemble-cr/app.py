@@ -46,11 +46,14 @@ def extract_text_from_pdf(file_data: bytes) -> str:
 async def get_oidc_token(audience: str) -> str:
     loop = asyncio.get_running_loop()
     def fetch():
-        req = google.auth.transport.requests.Request()
+        import urllib.request
+        url = f"http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/identity?audience={audience}"
+        req = urllib.request.Request(url, headers={"Metadata-Flavor": "Google"})
         try:
-            return google.oauth2.id_token.fetch_id_token(req, audience)
+            response = urllib.request.urlopen(req, timeout=5)
+            return response.read().decode('utf-8')
         except Exception as e:
-            print(f"Failed to fetch OIDC token for {audience}: {e}")
+            print(f"Failed to fetch OIDC token for {audience} via metadata server: {e}")
             return None
     return await loop.run_in_executor(None, fetch)
 
@@ -67,7 +70,10 @@ async def call_model(model_key: str, pdf_text: str):
         token = await get_oidc_token(target_url)
         headers = {"Content-Type": "application/json"}
         if token:
+            print(f"Successfully generated token for {model_key} (length: {len(token)})")
             headers["Authorization"] = f"Bearer {token}"
+        else:
+            print(f"Warning: No token generated for {model_key}")
             
         prompt = f"""Extract the following details from this invoice text:
         - invoice_id (string)

@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+google-cloud-storage
+httpx
+gunicorn
+PyMuPDF
+openai
+google-auth
+google-cloud-aiplatform
+tenacity

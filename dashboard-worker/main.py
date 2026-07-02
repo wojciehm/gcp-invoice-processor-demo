@@ -1,0 +1,91 @@
+import base64
+import json
+import concurrent.futures
+import requests
+import google.auth
+import functions_framework
+from google.auth.transport.requests import AuthorizedSession
+from google.cloud import storage
+
+# Configure a large connection pool for high concurrency
+credentials, project = google.auth.default()
+authed_session = AuthorizedSession(credentials)
+adapter = requests.adapters.HTTPAdapter(pool_connections=100, pool_maxsize=100)
+authed_session.mount('https://', adapter)
+authed_session.mount('http://', adapter)
+
+storage_client = storage.Client(project=project, credentials=credentials, _http=authed_session)
+
+def set_status(status, task):
+    try:
+        bucket = storage_client.bucket('skp-spare-invoices')
+        blob = bucket.blob('dashboard_status.json')
+        blob.upload_from_string(json.dumps({"status": status, "task": task}))
+    except Exception as e:
+        print(f"Error setting status: {e}")
+
+def handle_initiate_copy():
+    set_status("running", "Initiating Copy")
+    spare_bucket = storage_client.bucket('skp-spare-invoices')
+    raw_bucket = storage_client.bucket('skp-raw-invoices')
+    
+    blob_names = [b.name for b in spare_bucket.list_blobs() if b.name != 'dashboard_status.json'][:100]
+    
+    def copy_blob_by_name(blob_name):
+        try:
+            blob = spare_bucket.blob(blob_name)
+            spare_bucket.copy_blob(blob, raw_bucket)
+        except Exception as e:
+            print(f"Error copying {blob_name}: {e}")
+
+    print(f"Starting copy of {len(blob_names)} invoices...")
+    with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
+        list(executor.map(copy_blob_by_name, blob_names))
+    print(f"Finished copying {len(blob_names)} invoices.")
+    set_status("finished", "Initiating Copy")
+
+def handle_clear_data():
+    set_status("running", "Clearing Data")
+    buckets_to_clear = [
+        'skp-raw-invoices',
+        'skp-os-processed-results',
+        'skp-ge-processed-results'
+    ]
+
+    def delete_blob_by_name(bucket_name, blob_name):
+        try:
+            bucket = storage_client.bucket(bucket_name)
+            blob = bucket.blob(blob_name)
+            blob.delete()
+        except Exception as e:
+            print(f"Error deleting blob {blob_name}: {e}")
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
+        for bucket_name in buckets_to_clear:
+            try:
+                bucket = storage_client.bucket(bucket_name)
+                blobs = list(bucket.list_blobs())
+                list(executor.map(lambda b: delete_blob_by_name(bucket_name, b.name), blobs))
+                print(f"Cleared {len(blobs)} files from {bucket_name}")
+            except Exception as e:
+                print(f"Error clearing {bucket_name}: {e}")
+    print("Finished cleaning up buckets.")
+    set_status("finished", "Clearing Data")
+
+@functions_framework.cloud_event
+def process_command(cloud_event):
+    """Triggered from a message on a Cloud Pub/Sub topic."""
+    pubsub_message = cloud_event.data["message"]["data"]
+    try:
+        decoded_msg = base64.b64decode(pubsub_message).decode('utf-8')
+        data = json.loads(decoded_msg)
+        action = data.get("action")
+        
+        if action == "initiate_copy":
+            handle_initiate_copy()
+        elif action == "clear_data":
+            handle_clear_data()
+        else:
+            print(f"Unknown action received: {action}")
+    except Exception as e:
+        print(f"Error processing message: {e}")

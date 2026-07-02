@@ -94,7 +94,7 @@ async def call_model(model_key: str, pdf_text: str):
             "stream": False
         }
         
-        async with httpx.AsyncClient(timeout=120.0) as client:
+        async with httpx.AsyncClient(timeout=300.0) as client:
             response = await client.post(f"{target_url}/api/generate", json=payload, headers=headers)
             if response.status_code != 200:
                 print(f"Error {response.status_code} from {model_key}: {response.text}")
@@ -104,7 +104,7 @@ async def call_model(model_key: str, pdf_text: str):
             return json.loads(response_text)
             
     except Exception as e:
-        print(f"Error calling {model_key}: {e}")
+        print(f"Error calling {model_key}: {type(e).__name__} - {e}")
         return {}
 
 def majority_vote(results, key):

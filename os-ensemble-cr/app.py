@@ -1,15 +1,15 @@
 import asyncio
 import json
 import time
+import os
 from fastapi import FastAPI, BackgroundTasks, Request
 from google.cloud import storage
 import uvicorn
 import fitz
-from openai import AsyncOpenAI
+import httpx
 import google.auth
 import google.auth.transport.requests
-from tenacity import retry, wait_random_exponential, stop_after_attempt, retry_if_exception_type
-from google.api_core.exceptions import TooManyRequests, InternalServerError, ServiceUnavailable
+import google.oauth2.id_token
 
 app = FastAPI()
 
@@ -18,57 +18,93 @@ LOCATION = 'europe-west3'
 SOURCE_BUCKET = 'skp-raw-invoices'
 DEST_BUCKET = 'skp-os-processed-results'
 
-import vertexai
-from vertexai.generative_models import GenerativeModel, Part
-
-# Initialize Vertex AI
-vertexai.init(project=PROJECT_ID, location="global")
-
-response_schema = {
-    "type": "OBJECT",
-    "properties": {
-        "invoice_id": {"type": "STRING"},
-        "total": {"type": "INTEGER"},
-        "tax": {"type": "NUMBER"},
-        "issuer": {"type": "STRING"}
-    },
-    "required": ["invoice_id", "total", "tax", "issuer"]
+# URLs will be provided via environment variables when deployed
+MODEL_URLS = {
+    "gemma4-12b": os.environ.get("GEMMA_URL"),
+    "qwen3-6-27b": os.environ.get("QWEN_URL"),
+    "mistral-7b": os.environ.get("MISTRAL_URL")
 }
 
-@retry(wait=wait_random_exponential(multiplier=1, max=60), stop=stop_after_attempt(10), retry=retry_if_exception_type((TooManyRequests, InternalServerError, ServiceUnavailable)))
-def generate_content_with_retry(model, pdf_part, response_schema):
-    return model.generate_content(
-        [pdf_part, "Extract the following details from this invoice."],
-        generation_config={
-            "response_mime_type": "application/json",
-            "response_schema": response_schema
-        }
-    )
+# The actual Ollama tags
+MODEL_TAGS = {
+    "gemma4-12b": "gemma4:12b",
+    "qwen3-6-27b": "qwen3.6:27b",
+    "mistral-7b": "mistral:7b"
+}
 
-async def call_model(model_name: str, file_data: bytes):
+def extract_text_from_pdf(file_data: bytes) -> str:
     try:
-        model = GenerativeModel(model_name)
-        
-        pdf_part = Part.from_data(data=file_data, mime_type="application/pdf")
-        
-        # We use sync generate_content in a thread pool to simulate async
-        loop = asyncio.get_running_loop()
-        response = await loop.run_in_executor(
-            None,
-            lambda: generate_content_with_retry(model, pdf_part, response_schema)
-        )
-        
-        content = response.text
-        return json.loads(content)
+        doc = fitz.open(stream=file_data, filetype="pdf")
+        text = ""
+        for page in doc:
+            text += page.get_text()
+        return text
     except Exception as e:
-        print(f"Error calling {model_name}: {e}")
+        print(f"Error extracting text from PDF: {e}")
+        return ""
+
+async def get_oidc_token(audience: str) -> str:
+    loop = asyncio.get_running_loop()
+    def fetch():
+        req = google.auth.transport.requests.Request()
+        try:
+            return google.oauth2.id_token.fetch_id_token(req, audience)
+        except Exception as e:
+            print(f"Failed to fetch OIDC token for {audience}: {e}")
+            return None
+    return await loop.run_in_executor(None, fetch)
+
+async def call_model(model_key: str, pdf_text: str):
+    target_url = MODEL_URLS.get(model_key)
+    if not target_url:
+        print(f"URL not configured for {model_key}")
+        return {}
+        
+    model_tag = MODEL_TAGS.get(model_key)
+
+    try:
+        # Get auth token
+        token = await get_oidc_token(target_url)
+        headers = {"Content-Type": "application/json"}
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+            
+        prompt = f"""Extract the following details from this invoice text:
+        - invoice_id (string)
+        - total (integer)
+        - tax (number)
+        - issuer (string)
+        
+        Return ONLY valid JSON matching this structure.
+        
+        Invoice Text:
+        {pdf_text}
+        """
+        
+        payload = {
+            "model": model_tag,
+            "prompt": prompt,
+            "format": "json",
+            "stream": False
+        }
+        
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            response = await client.post(f"{target_url}/api/generate", json=payload, headers=headers)
+            if response.status_code != 200:
+                print(f"Error {response.status_code} from {model_key}: {response.text}")
+                return {}
+            data = response.json()
+            response_text = data.get("response", "{}")
+            return json.loads(response_text)
+            
+    except Exception as e:
+        print(f"Error calling {model_key}: {e}")
         return {}
 
 def majority_vote(results, key):
     values = [r.get(key) for r in results if r.get(key) is not None]
     if not values:
         return None
-    # Return the most common value
     return max(set(values), key=values.count)
 
 def consensus_score(results, key):
@@ -91,29 +127,18 @@ async def process_file_background(file_name: str):
     except Exception as e:
         print(f"Error downloading {file_name}: {e}")
         return
+        
+    pdf_text = extract_text_from_pdf(file_data)
     
-    # Token refresh not needed for Vertex AI SDK
-    
-    # Simulate API calls to models with actual Gemini calls to simulate the ensemble
+    # Query all three OSS models in parallel
     results = await asyncio.gather(
-        call_model("gemini-3.5-flash", file_data),
-        call_model("gemini-3.5-flash", file_data),
-        call_model("gemini-3.5-flash", file_data)
+        call_model("gemma4-12b", pdf_text),
+        call_model("qwen3-6-27b", pdf_text),
+        call_model("mistral-7b", pdf_text)
     )
     
     end_time = time.time()
     processing_time = round(end_time - start_time, 2)
-    
-    import random
-    
-    # Simulate disagreement (25% chance model 2 disagrees, 25% chance model 3 disagrees)
-    if len(results) == 3:
-        if random.random() < 0.25 and "total" in results[1]:
-            results[1]["total"] = results[1].get("total", 0) + 1
-        if random.random() < 0.25 and "tax" in results[2]:
-            results[2]["tax"] = results[2].get("tax", 0.0) + 0.01
-        if random.random() < 0.10 and "issuer" in results[1]:
-            results[1]["issuer"] = "Unknown"
     
     print(f"Results before voting: {results}")
     

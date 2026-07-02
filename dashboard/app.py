@@ -148,7 +148,14 @@ with col1:
     - PyMuPDF preprocessing overhead
     """)
     if os_results:
-        st.dataframe(pd.DataFrame(os_results))
+        st.markdown("### Processed Invoices")
+        for res in sorted(os_results, key=lambda x: str(x.get('invoice_id', ''))):
+            conf = res.get('confidence', 0)
+            icon = "🟢" if conf >= 0.99 else "🟡" if conf >= 0.5 else "🔴"
+            invoice_id = res.get('invoice_id', 'Unknown')
+            
+            with st.expander(f"{icon} {invoice_id} (Confidence: {conf*100:.0f}%)"):
+                st.json(res)
 
 with col2:
     st.header("Gemini Enterprise")
@@ -174,4 +181,11 @@ with col2:
     - Built-in multi-modal reasoning
     """)
     if ge_results:
-        st.dataframe(pd.DataFrame(ge_results))
+        st.markdown("### Processed Invoices")
+        for res in sorted(ge_results, key=lambda x: str(x.get('invoice_id', ''))):
+            conf = res.get('confidence', 0)
+            icon = "🟢" if conf >= 0.99 else "🟡" if conf >= 0.5 else "🔴"
+            invoice_id = res.get('invoice_id', 'Unknown')
+            
+            with st.expander(f"{icon} {invoice_id} (Confidence: {conf*100:.0f}%)"):
+                st.json(res)

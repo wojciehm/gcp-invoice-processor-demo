@@ -87,8 +87,8 @@ For those wanting to explore the code, here are the main files to look at:
 
 - **`gemini-flash-cf/main.py`**: The Cloud Function that receives the Eventarc trigger, connects directly to Vertex AI, and passes the PDF to **Gemini 3.5 Flash** for native multimodal extraction.
 - **`os-ensemble-cr/app.py`**: The Cloud Run Orchestrator that receives the Eventarc trigger, extracts text using PyMuPDF, and manages the parallel HTTP requests to the 3 Open-Source LLMs, culminating in the majority-vote consensus logic.
-- **`deploy.sh`**: The master deployment script that provisions all buckets, deploys the serverless functions, and wires up the Eventarc triggers.
-- **`deploy_oss_models.sh`**: The script that provisions the three open-source LLMs (Gemma, Qwen, Mistral) on Cloud Run using NVIDIA L4 GPUs and the Ollama runtime.
+- **`scripts/deployment/deploy.sh`**: The master deployment script that provisions all buckets, deploys the serverless functions, and wires up the Eventarc triggers.
+- **`scripts/deployment/deploy_oss_models.sh`**: The script that provisions the three open-source LLMs (Gemma, Qwen, Mistral) on Cloud Run using NVIDIA L4 GPUs and the Ollama runtime.
 - **`dashboard/app.py`**: The Streamlit frontend that queries the output buckets and visualizes the extraction confidence, latency, and JSON results.
 
 ## Features
@@ -120,27 +120,27 @@ To deploy this project to your own Google Cloud environment, follow these steps:
 ### 1. Deploy the Open-Source Models
 The ensemble relies on three LLMs running on Cloud Run. Run the deployment script to provision them:
 ```bash
-chmod +x deploy_oss_models.sh
-./deploy_oss_models.sh
+chmod +x scripts/deployment/deploy_oss_models.sh
+./scripts/deployment/deploy_oss_models.sh
 ```
 *Note: This provisions NVIDIA L4 GPUs. Ensure you have the necessary regional quota.*
 
 ### 2. Deploy Orchestrators & Functions
 Run the primary deployment script to provision the storage buckets, the Gemini Cloud Function, the OS Orchestrator, and the Streamlit dashboard:
 ```bash
-chmod +x deploy.sh
-./deploy.sh
+chmod +x scripts/deployment/deploy.sh
+./scripts/deployment/deploy.sh
 ```
 
 ## Testing
 
 You can test the system locally or directly through the Cloud console.
 
-1. **Generate Test Invoices**: Run the included `generate_pdf.py` script to generate sample German invoices.
+1. **Generate Test Invoices**: Run the included `scripts/data_generation/generate_pdf.py` script to generate sample German invoices.
 2. **End-to-End Test**: Upload a generated PDF to the `invoice-demo-raw-invoices` bucket.
 3. **View Results**: Visit the URL for your deployed `dashboard-ui` Cloud Run service to see the extraction results appear in real-time.
 
 Alternatively, you can test the OS Ensemble inference directly from your terminal (if authenticated with `gcloud`):
 ```bash
-python3 test_inference.py
+python3 scripts/testing/test_inference.py
 ```

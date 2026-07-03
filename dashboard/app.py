@@ -1,9 +1,18 @@
+# ---------------------------------------------------------------------------
+# STREAMLIT DASHBOARD
+# ---------------------------------------------------------------------------
+# This file creates the beautiful web interface you see in your browser.
+# It connects to Google Cloud Storage, reads the JSON results generated
+# by our AI models, and displays them as metrics and expandable cards.
+# ---------------------------------------------------------------------------
+
 import streamlit as st
 import pandas as pd
 import json
 from google.cloud import storage
 import concurrent.futures
 
+# Set up the basic layout of the webpage
 st.set_page_config(page_title="Document Processing Demo", layout="wide")
 
 st.title("GitOps & Document Processing")
@@ -14,6 +23,12 @@ This dashboard compares two architectural approaches to processing inbound invoi
 Both architectures process invoices dumped into a GCS bucket, but they differ significantly in their implementation complexity, latency, and operational overhead.
 """)
 
+# ---------------------------------------------------------------------------
+# DATA FETCHING: This function goes into our Google Cloud Storage buckets
+# and downloads all the processed JSON files very quickly (using parallel threads).
+# The `@st.cache_data` part makes sure we don't redownload the same data 
+# multiple times per second, saving cost and time.
+# ---------------------------------------------------------------------------
 @st.cache_data(ttl=5)
 def fetch_data():
     storage_client = storage.Client()
@@ -24,6 +39,8 @@ def fetch_data():
     
     os_results = []
     ge_results = []
+    
+    # Count how many invoices were uploaded in total
     total_raw = sum(1 for _ in raw_bucket.list_blobs())
     
     def process_blob(blob):
@@ -32,9 +49,11 @@ def fetch_data():
         except Exception:
             return None
 
+    # Get the list of finished files
     os_blobs = [b for b in os_bucket.list_blobs() if b.name.endswith('.json')]
     ge_blobs = [b for b in ge_bucket.list_blobs() if b.name.endswith('.json')]
 
+    # Download them all simultaneously for speed
     with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
         for res in executor.map(process_blob, os_blobs):
             if res: os_results.append(res)

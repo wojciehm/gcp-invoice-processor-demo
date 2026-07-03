@@ -81,6 +81,16 @@ graph LR
     end
 ```
 
+## Code References (Where does the magic happen?)
+
+For those wanting to explore the code, here are the main files to look at:
+
+- **`gemini-flash-cf/main.py`**: The Cloud Function that receives the Eventarc trigger, connects directly to Vertex AI, and passes the PDF to **Gemini 3.5 Flash** for native multimodal extraction.
+- **`os-ensemble-cr/app.py`**: The Cloud Run Orchestrator that receives the Eventarc trigger, extracts text using PyMuPDF, and manages the parallel HTTP requests to the 3 Open-Source LLMs, culminating in the majority-vote consensus logic.
+- **`deploy.sh`**: The master deployment script that provisions all buckets, deploys the serverless functions, and wires up the Eventarc triggers.
+- **`deploy_oss_models.sh`**: The script that provisions the three open-source LLMs (Gemma, Qwen, Mistral) on Cloud Run using NVIDIA L4 GPUs and the Ollama runtime.
+- **`dashboard/app.py`**: The Streamlit frontend that queries the output buckets and visualizes the extraction confidence, latency, and JSON results.
+
 ## Features
 
 1. **Gemini Enterprise Pipeline:**

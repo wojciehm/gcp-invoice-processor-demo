@@ -45,6 +45,42 @@ graph TD
     OSBucket -.-> Dashboard
 ```
 
+## Key Architectural Insights for Customers
+
+This demo is designed to highlight the hidden overheads in traditional text-based AI pipelines versus modern multimodal approaches.
+
+### 1. The Multimodal Advantage (Zero Preprocessing)
+- **Gemini Enterprise Pipeline:** Gemini 3.5 Flash is **natively multimodal**. The Cloud Function simply passes the raw PDF bytes directly to the Vertex AI API. No third-party parsing libraries, no OCR, and no layout-reconstruction logic is required. This drastically reduces cold starts and code complexity.
+- **Open-Source Ensemble:** The OSS models (Mistral, Qwen, Gemma) hosted on Cloud Run via Ollama are **text-only**. The orchestrator *must* incur the compute overhead of running `PyMuPDF` to parse the binary PDF, extract the text, and inject it into the prompt. This introduces latency and risks losing document structure/layout context.
+
+### 2. Serverless Simplicity
+By leveraging **Google Cloud Functions (gen2)** for the Gemini pipeline, we eliminate the need for container management, Dockerfiles, and complex orchestration. Eventarc seamlessly triggers the serverless function the millisecond a document lands in Cloud Storage.
+
+## Pipeline Flow Comparison
+
+```mermaid
+graph LR
+    subgraph "Gemini Enterprise (Cloud Function)"
+        direction LR
+        GCS1[(GCS PDF)] -->|Eventarc| CF[Cloud Function]
+        CF -->|Raw Bytes| Gemini[Gemini 3.5 Flash]
+        Gemini -->|Native JSON| Result1[(JSON Result)]
+    end
+
+    subgraph "Open-Source Ensemble (Cloud Run)"
+        direction LR
+        GCS2[(GCS PDF)] -->|Eventarc| CR[Cloud Run Orchestrator]
+        CR -->|PyMuPDF Parsing| Text(Extracted Text)
+        Text -->|HTTP Prompt| M1[Mistral]
+        Text -->|HTTP Prompt| M2[Qwen]
+        Text -->|HTTP Prompt| M3[Gemma]
+        M1 --> Vote{Majority Vote}
+        M2 --> Vote
+        M3 --> Vote
+        Vote -->|Consensus JSON| Result2[(JSON Result)]
+    end
+```
+
 ## Features
 
 1. **Gemini Enterprise Pipeline:**

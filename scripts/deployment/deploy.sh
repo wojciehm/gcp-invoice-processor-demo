@@ -46,4 +46,26 @@ gcloud eventarc triggers create os-ensemble-cr-trigger \
   --event-filters="bucket=invoice-demo-raw-invoices" \
   --service-account=884389213001-compute@developer.gserviceaccount.com
 
+echo "Deploying Dashboard Worker..."
+gcloud run deploy dashboard-worker \
+  --source=dashboard-worker \
+  --region=europe-west4 \
+  --no-allow-unauthenticated
+
+echo "Creating Eventarc Trigger for Dashboard Worker..."
+gcloud eventarc triggers create dashboard-worker-trigger \
+  --location=europe-west4 \
+  --destination-run-service=dashboard-worker \
+  --destination-run-region=europe-west4 \
+  --event-filters="type=google.cloud.pubsub.topic.v1.messagePublished" \
+  --transport-topic="projects/wojciech-genai-demo/topics/dashboard-commands" \
+  --service-account=884389213001-compute@developer.gserviceaccount.com
+
+echo "Deploying Dashboard UI..."
+gcloud run deploy dashboard-ui \
+  --source=dashboard \
+  --region=europe-west4 \
+  --allow-unauthenticated \
+  --port=8501
+
 echo "Deployment complete!"

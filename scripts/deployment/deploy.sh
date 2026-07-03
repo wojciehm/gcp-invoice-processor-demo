@@ -37,8 +37,14 @@ gcloud functions deploy gemini-flash-cf \
   --entry-point=process_invoice \
   --trigger-event-filters="type=google.cloud.storage.object.v1.finalized" \
   --trigger-event-filters="bucket=${BUCKET_PREFIX}-raw-invoices" \
-  --allow-unauthenticated \
+  --no-allow-unauthenticated \
   --set-env-vars="PROJECT_ID=${PROJECT_ID},REGION=${REGION},BUCKET_PREFIX=${BUCKET_PREFIX}"
+
+echo "Granting Eventarc Service Account permission to invoke Gemini Flash Cloud Function..."
+gcloud functions add-iam-policy-binding gemini-flash-cf \
+  --region=$REGION \
+  --member="serviceAccount:${SERVICE_ACCOUNT}" \
+  --role="roles/cloudfunctions.invoker"
 
 echo "Fetching URLs for Open-Source Models..."
 GEMMA_URL=$(gcloud run services describe gemma4-12b --region=$REGION --format='value(status.url)' 2>/dev/null || echo "")

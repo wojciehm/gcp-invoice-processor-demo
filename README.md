@@ -12,6 +12,14 @@ When an invoice (PDF) is dropped into a Google Cloud Storage (GCS) bucket, Event
 
 The extraction results, including processing time and a calculated confidence score, are saved into two separate GCS buckets. A real-time Streamlit dashboard visualizes the results, comparing the latency, confidence, and complexity of both architectures.
 
+## Data Ingestion Methods
+
+There are three ways to get PDF invoices into the `invoice-demo-raw-invoices` bucket to trigger the pipelines:
+
+1. **Dashboard UI Simulation (Bulk Testing):** Click the "🚀 Initiate Test" button in the Streamlit dashboard to dispatch a background worker that copies 100 sample PDFs from a spare bucket into the raw bucket simultaneously. This is used to test the auto-scaling and parallel processing capabilities of the architectures.
+2. **Gmail Ingestion (Real-World Automation):** A background Cloud Function (`gmail-ingestion-cf`) continuously monitors a designated Google Workspace inbox. If it receives an unread email with "invoice" in the subject line, it automatically extracts the PDF attachment, drops it into the raw bucket, and marks the email as read.
+3. **Manual Upload:** You can manually drag-and-drop a PDF into the bucket via the Google Cloud Console or upload it using the `gcloud storage cp` CLI tool.
+
 ## Architecture
 
 ```mermaid

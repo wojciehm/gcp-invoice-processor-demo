@@ -91,6 +91,12 @@ gcloud functions deploy dashboard-worker \
   --no-allow-unauthenticated \
   --set-env-vars="BUCKET_PREFIX=${BUCKET_PREFIX}"
 
+echo "Granting Pub/Sub permission to invoke Dashboard Worker..."
+gcloud functions add-iam-policy-binding dashboard-worker \
+  --region=$REGION \
+  --member="serviceAccount:${SERVICE_ACCOUNT}" \
+  --role="roles/cloudfunctions.invoker"
+
 echo "Deploying Dashboard UI..."
 gcloud run deploy dashboard-ui \
   --source=dashboard \

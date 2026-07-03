@@ -24,20 +24,26 @@ There are three ways to get PDF invoices into the `<YOUR_BUCKET_PREFIX>-raw-invo
 
 ```mermaid
 graph TD
-    User([User / System]) -->|Uploads PDF| RawBucket[(<YOUR_BUCKET_PREFIX>-raw-invoices)]
+    classDef user fill:#f9f,stroke:#333,stroke-width:2px;
+    classDef bucket fill:#f96,stroke:#333,stroke-width:2px;
+    classDef compute fill:#bbf,stroke:#333,stroke-width:2px;
+    classDef model fill:#dfd,stroke:#333,stroke-width:2px;
+    classDef dashboard fill:#ff9,stroke:#333,stroke-width:2px;
+
+    User([User / System]):::user -->|Uploads PDF| RawBucket[(<YOUR_BUCKET_PREFIX>-raw-invoices)]:::bucket
     
-    RawBucket -->|Eventarc Trigger| GEM_CF[Gemini Flash Function]
-    RawBucket -->|Eventarc Trigger| OS_CF[OS Ensemble Orchestrator]
+    RawBucket -->|Eventarc Trigger| GEM_CF[Gemini Flash Function]:::compute
+    RawBucket -->|Eventarc Trigger| OS_CF[OS Ensemble Orchestrator]:::compute
     
     subgraph "Gemini Enterprise Architecture"
-        GEM_CF -->|Native Extraction| Gemini[Gemini 3.5 Flash]
+        GEM_CF -->|Native Extraction| Gemini[Gemini 3.5 Flash]:::model
         Gemini -->|Returns JSON| GEM_CF
     end
     
     subgraph "Open-Source Ensemble Architecture"
-        OS_CF -->|Parallel HTTP| Model1[Cloud Run: Gemma 4 12B]
-        OS_CF -->|Parallel HTTP| Model2[Cloud Run: Qwen 3.6 27B]
-        OS_CF -->|Parallel HTTP| Model3[Cloud Run: Mistral 7B]
+        OS_CF -->|Parallel HTTP| Model1[Cloud Run: Gemma 4 12B]:::model
+        OS_CF -->|Parallel HTTP| Model2[Cloud Run: Qwen 3.6 27B]:::model
+        OS_CF -->|Parallel HTTP| Model3[Cloud Run: Mistral 7B]:::model
         
         Model1 -->|JSON| OS_CF
         Model2 -->|JSON| OS_CF
@@ -46,10 +52,10 @@ graph TD
         OS_CF -->|Majority Vote Logic| OS_CF
     end
     
-    GEM_CF -->|Saves Result| GEBucket[(<YOUR_BUCKET_PREFIX>-ge-processed-results)]
-    OS_CF -->|Saves Result| OSBucket[(<YOUR_BUCKET_PREFIX>-os-processed-results)]
+    GEM_CF -->|Saves Result| GEBucket[(<YOUR_BUCKET_PREFIX>-ge-processed-results)]:::bucket
+    OS_CF -->|Saves Result| OSBucket[(<YOUR_BUCKET_PREFIX>-os-processed-results)]:::bucket
     
-    GEBucket -.-> Dashboard[Streamlit Dashboard]
+    GEBucket -.-> Dashboard[Streamlit Dashboard]:::dashboard
     OSBucket -.-> Dashboard
 ```
 
@@ -68,24 +74,30 @@ By leveraging **Google Cloud Functions (gen2)** for the Gemini pipeline, we elim
 
 ```mermaid
 graph LR
+    classDef bucket fill:#f96,stroke:#333,stroke-width:2px;
+    classDef compute fill:#bbf,stroke:#333,stroke-width:2px;
+    classDef model fill:#dfd,stroke:#333,stroke-width:2px;
+    classDef logic fill:#eee,stroke:#333,stroke-width:2px;
+    classDef result fill:#ff9,stroke:#333,stroke-width:2px;
+
     subgraph "Gemini Enterprise (Cloud Function)"
         direction LR
-        GCS1[(GCS PDF)] -->|Eventarc| CF[Cloud Function]
-        CF -->|Raw Bytes| Gemini[Gemini 3.5 Flash]
-        Gemini -->|Native JSON| Result1[(JSON Result)]
+        GCS1[(GCS PDF)]:::bucket -->|Eventarc| CF[Cloud Function]:::compute
+        CF -->|Raw Bytes| Gemini[Gemini 3.5 Flash]:::model
+        Gemini -->|Native JSON| Result1[(JSON Result)]:::result
     end
 
     subgraph "Open-Source Ensemble (Cloud Run)"
         direction LR
-        GCS2[(GCS PDF)] -->|Eventarc| CR[Cloud Run Orchestrator]
-        CR -->|PyMuPDF Parsing| Text(Extracted Text)
-        Text -->|HTTP Prompt| M1[Mistral]
-        Text -->|HTTP Prompt| M2[Qwen]
-        Text -->|HTTP Prompt| M3[Gemma]
-        M1 --> Vote{Majority Vote}
+        GCS2[(GCS PDF)]:::bucket -->|Eventarc| CR[Cloud Run Orchestrator]:::compute
+        CR -->|PyMuPDF Parsing| Text(Extracted Text):::logic
+        Text -->|HTTP Prompt| M1[Mistral]:::model
+        Text -->|HTTP Prompt| M2[Qwen]:::model
+        Text -->|HTTP Prompt| M3[Gemma]:::model
+        M1 --> Vote{Majority Vote}:::logic
         M2 --> Vote
         M3 --> Vote
-        Vote -->|Consensus JSON| Result2[(JSON Result)]
+        Vote -->|Consensus JSON| Result2[(JSON Result)]:::result
     end
 ```
 
@@ -138,7 +150,11 @@ The ensemble relies on three LLMs running on Cloud Run. Run the deployment scrip
 chmod +x scripts/deployment/deploy_oss_models.sh
 ./scripts/deployment/deploy_oss_models.sh
 ```
-*Note: This script actively downloads the heavy model weights (Gemma, Qwen, Mistral) into a custom Docker image and pushes it to your Google Cloud Artifact Registry before deploying them to Cloud Run with NVIDIA L4 GPUs. This ensures that when the Cloud Run instances scale up, they do not have to redownload the multi-gigabyte models from the internet. Ensure you have the necessary regional quota for L4 GPUs.*
+*Note: This script actively downloads the heavy model weights (Gemma, Qwen, Mistral) into a custom Docker image and pushes it to your Google Cloud Artifact Registry before deploying them to Cloud Run with NVIDIA L4 GPUs. This ensures that when the Cloud Run instances scale up, they do not have to redownload the multi-gigabyte models from the internet.*
+
+> [!IMPORTANT]
+> **GPU Quota & Scaling Limitations**
+> The deployment script explicitly configures `--max-instances=1` and `--gpu=1` for each of the three models. Because most default Google Cloud environments have a strict L4 GPU quota (e.g., 8 GPUs per region), limiting each model to exactly one instance prevents auto-scaling events from accidentally exceeding your region's quota during heavy traffic spikes. This ensures a safe, predictable deployment at the cost of parallel batch processing speed.
 
 ### 2. Deploy Orchestrators & Functions
 Run the primary deployment script to provision the storage buckets, the Gemini Cloud Function, the OS Orchestrator, and the Streamlit dashboard:

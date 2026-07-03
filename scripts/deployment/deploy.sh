@@ -10,6 +10,12 @@ fi
 
 PROJECT_NUMBER=$(gcloud projects describe $PROJECT_ID --format="value(projectNumber)")
 SERVICE_ACCOUNT="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
+PUBSUB_SA="service-${PROJECT_NUMBER}@gcp-sa-pubsub.iam.gserviceaccount.com"
+
+echo "Ensuring Pub/Sub Service Agent can generate auth tokens for Push subscriptions..."
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+  --member="serviceAccount:${PUBSUB_SA}" \
+  --role="roles/iam.serviceAccountTokenCreator" || true
 
 echo "Creating Cloud Storage Buckets..."
 gcloud storage buckets create gs://${BUCKET_PREFIX}-raw-invoices --location=$REGION || true

@@ -239,10 +239,8 @@ async def process_invoice(request: Request):
     if not file_name:
         return {"status": "error", "message": "No file name found in event"}
         
-    # Kick off the long-running process in the background so we can quickly 
-    # acknowledge the Eventarc message and avoid timeouts
     await process_file_background(file_name)
-    return {"status": "processed", "file": file_name}
+    return {"status": "success", "message": f"Processed {file_name}."}
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8080)

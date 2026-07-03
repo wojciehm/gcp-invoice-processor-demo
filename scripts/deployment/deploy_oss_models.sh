@@ -58,6 +58,13 @@ EOF
             --port=8080 \
             --timeout=3600s
         
+        echo "Granting OS Ensemble access to $SERVICE_NAME..."
+        PROJECT_NUMBER=\$(gcloud projects describe \$PROJECT_ID --format="value(projectNumber)")
+        gcloud run services add-iam-policy-binding \$SERVICE_NAME \
+            --region=\$REGION \
+            --member="serviceAccount:\${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
+            --role="roles/run.invoker" || true
+        
         # Clean up build directory
         rm -rf $BUILD_DIR
         echo "Finished deployment for $MODEL"

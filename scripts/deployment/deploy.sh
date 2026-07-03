@@ -59,6 +59,12 @@ gcloud run deploy os-ensemble-cr \
   --min-instances=0 \
   --set-env-vars="PROJECT_ID=${PROJECT_ID},BUCKET_PREFIX=${BUCKET_PREFIX},GEMMA_URL=${GEMMA_URL},QWEN_URL=${QWEN_URL},MISTRAL_URL=${MISTRAL_URL}"
 
+echo "Granting Eventarc Service Account permission to invoke Open-Source Ensemble..."
+gcloud run services add-iam-policy-binding os-ensemble-cr \
+  --region=$REGION \
+  --member="serviceAccount:${SERVICE_ACCOUNT}" \
+  --role="roles/run.invoker"
+
 echo "Creating Eventarc Trigger for Open-Source Ensemble..."
 gcloud eventarc triggers create os-ensemble-cr-trigger \
   --location=$REGION \
@@ -74,6 +80,12 @@ gcloud run deploy dashboard-worker \
   --region=$REGION \
   --no-allow-unauthenticated \
   --set-env-vars="BUCKET_PREFIX=${BUCKET_PREFIX}"
+
+echo "Granting Eventarc Service Account permission to invoke Dashboard Worker..."
+gcloud run services add-iam-policy-binding dashboard-worker \
+  --region=$REGION \
+  --member="serviceAccount:${SERVICE_ACCOUNT}" \
+  --role="roles/run.invoker"
 
 echo "Creating Eventarc Trigger for Dashboard Worker..."
 gcloud eventarc triggers create dashboard-worker-trigger \

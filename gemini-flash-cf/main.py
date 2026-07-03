@@ -8,7 +8,7 @@ from google.api_core.exceptions import TooManyRequests, InternalServerError, Ser
 
 PROJECT_ID = 'wojciech-genai-demo'
 LOCATION = 'europe-west3'
-DEST_BUCKET = 'skp-ge-processed-results'
+DEST_BUCKET = 'invoice-demo-ge-processed-results'
 
 @retry(wait=wait_random_exponential(multiplier=1, max=60), stop=stop_after_attempt(10), retry=retry_if_exception_type((TooManyRequests, InternalServerError, ServiceUnavailable)))
 def generate_content_with_retry(model, pdf_part, prompt, response_schema):

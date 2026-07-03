@@ -4,7 +4,7 @@ from google.auth import default
 from googleapiclient.discovery import build
 from google.cloud import storage
 
-BUCKET_NAME = 'skp-raw-invoices'
+BUCKET_NAME = 'invoice-demo-raw-invoices'
 USER_EMAIL = 'wmarusiak@gcp.altostrat.com'
 SCOPES = ['https://www.googleapis.com/auth/gmail.modify']
 

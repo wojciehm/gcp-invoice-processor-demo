@@ -18,7 +18,7 @@ storage_client = storage.Client(project=project, credentials=credentials, _http=
 
 def set_status(status, task):
     try:
-        bucket = storage_client.bucket('skp-spare-invoices')
+        bucket = storage_client.bucket('invoice-demo-spare-invoices')
         blob = bucket.blob('dashboard_status.json')
         blob.upload_from_string(json.dumps({"status": status, "task": task}))
     except Exception as e:
@@ -26,8 +26,8 @@ def set_status(status, task):
 
 def handle_initiate_copy():
     set_status("running", "Initiating Copy")
-    spare_bucket = storage_client.bucket('skp-spare-invoices')
-    raw_bucket = storage_client.bucket('skp-raw-invoices')
+    spare_bucket = storage_client.bucket('invoice-demo-spare-invoices')
+    raw_bucket = storage_client.bucket('invoice-demo-raw-invoices')
     
     blob_names = [b.name for b in spare_bucket.list_blobs() if b.name != 'dashboard_status.json'][:100]
     
@@ -47,9 +47,9 @@ def handle_initiate_copy():
 def handle_clear_data():
     set_status("running", "Clearing Data")
     buckets_to_clear = [
-        'skp-raw-invoices',
-        'skp-os-processed-results',
-        'skp-ge-processed-results'
+        'invoice-demo-raw-invoices',
+        'invoice-demo-os-processed-results',
+        'invoice-demo-ge-processed-results'
     ]
 
     def delete_blob_by_name(bucket_name, blob_name):

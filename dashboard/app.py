@@ -18,9 +18,9 @@ Both architectures process invoices dumped into a GCS bucket, but they differ si
 def fetch_data():
     storage_client = storage.Client()
     
-    os_bucket = storage_client.bucket('skp-os-processed-results')
-    ge_bucket = storage_client.bucket('skp-ge-processed-results')
-    raw_bucket = storage_client.bucket('skp-raw-invoices')
+    os_bucket = storage_client.bucket('invoice-demo-os-processed-results')
+    ge_bucket = storage_client.bucket('invoice-demo-ge-processed-results')
+    raw_bucket = storage_client.bucket('invoice-demo-raw-invoices')
     
     os_results = []
     ge_results = []
@@ -65,7 +65,7 @@ def initiate_copy_from_spare():
 def fetch_status():
     try:
         storage_client = storage.Client()
-        bucket = storage_client.bucket('skp-spare-invoices')
+        bucket = storage_client.bucket('invoice-demo-spare-invoices')
         blob = bucket.blob('dashboard_status.json')
         if blob.exists():
             return json.loads(blob.download_as_string())

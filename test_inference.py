@@ -22,7 +22,7 @@ def run_test():
     import base64
     gcs_event = {
         "name": "INV-1001.pdf",
-        "bucket": "skp-raw-invoices"
+        "bucket": "invoice-demo-raw-invoices"
     }
     
     encoded_data = base64.b64encode(json.dumps(gcs_event).encode('utf-8')).decode('utf-8')
@@ -46,7 +46,7 @@ def run_test():
     except:
         print(f"Response Text: {response.text}")
         
-    print("\nCheck Google Cloud Storage bucket 'skp-os-processed-results' for the final output!")
+    print("\nCheck Google Cloud Storage bucket 'invoice-demo-os-processed-results' for the final output!")
 
 if __name__ == "__main__":
     run_test()

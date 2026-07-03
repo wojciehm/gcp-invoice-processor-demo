@@ -22,7 +22,7 @@ graph TD
     RawBucket -->|Eventarc Trigger| OS_CF[OS Ensemble Orchestrator]
     
     subgraph "Gemini Enterprise Architecture"
-        GEM_CF -->|Native Extraction| Gemini[Gemini 1.5 Flash]
+        GEM_CF -->|Native Extraction| Gemini[Gemini 3.5 Flash]
         Gemini -->|Returns JSON| GEM_CF
     end
     
@@ -48,7 +48,7 @@ graph TD
 ## Features
 
 1. **Gemini Enterprise Pipeline:**
-   - Uses a single Cloud Function invoking **Gemini 1.5 Flash** with native JSON structured outputs.
+   - Uses a single Cloud Function invoking **Gemini 3.5 Flash** with native JSON structured outputs.
    - Requires no PDF parsing libraries (handles PDFs natively).
    - Near-instantaneous extraction latency.
 

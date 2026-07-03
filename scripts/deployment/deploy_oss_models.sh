@@ -50,7 +50,7 @@ EOF
             --gpu-type=nvidia-l4 \
             --cpu=8 \
             --memory=32Gi \
-            --max-instances=3 \
+            --max-instances=1 \
             --min-instances=0 \
             --concurrency=80 \
             --no-gpu-zonal-redundancy \

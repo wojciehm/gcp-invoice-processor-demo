@@ -29,13 +29,20 @@ Both architectures process invoices dumped into a GCS bucket, but they differ si
 # The `@st.cache_data` part makes sure we don't redownload the same data 
 # multiple times per second, saving cost and time.
 # ---------------------------------------------------------------------------
+
+# Initialize GCP Clients
+# Streamlit runs in Cloud Run, so ADC is used automatically.
+storage_client = storage.Client()
+
+PROJECT_ID = os.environ.get('PROJECT_ID')
+TOPIC_ID = "dashboard-commands"
+BUCKET_PREFIX = os.environ.get('BUCKET_PREFIX')
+
 @st.cache_data(ttl=5)
 def fetch_data():
-    storage_client = storage.Client()
-    
-    os_bucket = storage_client.bucket('invoice-demo-os-processed-results')
-    ge_bucket = storage_client.bucket('invoice-demo-ge-processed-results')
-    raw_bucket = storage_client.bucket('invoice-demo-raw-invoices')
+    os_bucket = storage_client.bucket(f'{BUCKET_PREFIX}-os-processed-results')
+    ge_bucket = storage_client.bucket(f'{BUCKET_PREFIX}-ge-processed-results')
+    raw_bucket = storage_client.bucket(f'{BUCKET_PREFIX}-raw-invoices')
     
     os_results = []
     ge_results = []
@@ -62,11 +69,7 @@ def fetch_data():
                 
     return os_results, ge_results, total_raw
 
-import json
 from google.cloud import pubsub_v1
-
-PROJECT_ID = "wojciech-genai-demo"
-TOPIC_ID = "dashboard-commands"
 
 def publish_command(action):
     publisher = pubsub_v1.PublisherClient()
@@ -84,7 +87,7 @@ def initiate_copy_from_spare():
 def fetch_status():
     try:
         storage_client = storage.Client()
-        bucket = storage_client.bucket('invoice-demo-spare-invoices')
+        bucket = storage_client.bucket(f'{BUCKET_PREFIX}-spare-invoices')
         blob = bucket.blob('dashboard_status.json')
         if blob.exists():
             return json.loads(blob.download_as_string())

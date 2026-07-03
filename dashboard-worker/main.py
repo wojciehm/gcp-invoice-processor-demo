@@ -1,3 +1,4 @@
+import os
 import base64
 import json
 import concurrent.futures
@@ -6,6 +7,12 @@ import google.auth
 import functions_framework
 from google.auth.transport.requests import AuthorizedSession
 from google.cloud import storage
+
+BUCKET_PREFIX = os.environ.get('BUCKET_PREFIX')
+SPARE_BUCKET_NAME = f'{BUCKET_PREFIX}-spare-invoices'
+RAW_BUCKET_NAME = f'{BUCKET_PREFIX}-raw-invoices'
+OS_BUCKET_NAME = f'{BUCKET_PREFIX}-os-processed-results'
+GE_BUCKET_NAME = f'{BUCKET_PREFIX}-ge-processed-results'
 
 # Configure a large connection pool for high concurrency
 credentials, project = google.auth.default()
@@ -18,7 +25,7 @@ storage_client = storage.Client(project=project, credentials=credentials, _http=
 
 def set_status(status, task):
     try:
-        bucket = storage_client.bucket('invoice-demo-spare-invoices')
+        bucket = storage_client.bucket(SPARE_BUCKET_NAME)
         blob = bucket.blob('dashboard_status.json')
         blob.upload_from_string(json.dumps({"status": status, "task": task}))
     except Exception as e:
@@ -26,8 +33,8 @@ def set_status(status, task):
 
 def handle_initiate_copy():
     set_status("running", "Initiating Copy")
-    spare_bucket = storage_client.bucket('invoice-demo-spare-invoices')
-    raw_bucket = storage_client.bucket('invoice-demo-raw-invoices')
+    spare_bucket = storage_client.bucket(SPARE_BUCKET_NAME)
+    raw_bucket = storage_client.bucket(RAW_BUCKET_NAME)
     
     blob_names = [b.name for b in spare_bucket.list_blobs() if b.name != 'dashboard_status.json'][:100]
     
@@ -47,9 +54,9 @@ def handle_initiate_copy():
 def handle_clear_data():
     set_status("running", "Clearing Data")
     buckets_to_clear = [
-        'invoice-demo-raw-invoices',
-        'invoice-demo-os-processed-results',
-        'invoice-demo-ge-processed-results'
+        RAW_BUCKET_NAME,
+        OS_BUCKET_NAME,
+        GE_BUCKET_NAME
     ]
 
     def delete_blob_by_name(bucket_name, blob_name):

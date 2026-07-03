@@ -1,11 +1,14 @@
+import os
 import base64
 import functions_framework
 from google.auth import default
 from googleapiclient.discovery import build
 from google.cloud import storage
 
-BUCKET_NAME = 'invoice-demo-raw-invoices'
-USER_EMAIL = 'wmarusiak@gcp.altostrat.com'
+# Get configuration from environment variables
+BUCKET_PREFIX = os.environ.get('BUCKET_PREFIX')
+BUCKET_NAME = f'{BUCKET_PREFIX}-raw-invoices'
+USER_EMAIL = os.environ.get('GMAIL_USER')
 SCOPES = ['https://www.googleapis.com/auth/gmail.modify']
 
 @functions_framework.cloud_event

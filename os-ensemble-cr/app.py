@@ -29,10 +29,11 @@ import google.oauth2.id_token
 
 app = FastAPI()
 
-PROJECT_ID = 'wojciech-genai-demo'
-LOCATION = 'europe-west3'
-SOURCE_BUCKET = 'invoice-demo-raw-invoices'
-DEST_BUCKET = 'invoice-demo-os-processed-results'
+PROJECT_ID = os.environ.get('PROJECT_ID')
+BUCKET_PREFIX = os.environ.get('BUCKET_PREFIX')
+
+SOURCE_BUCKET = f"{BUCKET_PREFIX}-raw-invoices"
+DEST_BUCKET = f"{BUCKET_PREFIX}-os-processed-results"
 
 # ---------------------------------------------------------------------------
 # URLs for the three separate Cloud Run services hosting the open-source models

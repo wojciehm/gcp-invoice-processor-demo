@@ -8,17 +8,22 @@
 # into JSON format, without needing any complex preprocessing.
 # ---------------------------------------------------------------------------
 
+import os
 import json
+import time
 import functions_framework
+from google.cloud import storage
 import vertexai
 from vertexai.generative_models import GenerativeModel, Part
-from google.cloud import storage
 from tenacity import retry, wait_random_exponential, stop_after_attempt, retry_if_exception_type
 from google.api_core.exceptions import TooManyRequests, InternalServerError, ServiceUnavailable
 
-PROJECT_ID = 'wojciech-genai-demo'
-LOCATION = 'europe-west3'
-DEST_BUCKET = 'invoice-demo-ge-processed-results'
+# Get configuration from environment variables
+PROJECT_ID = os.environ.get('PROJECT_ID')
+REGION = os.environ.get('REGION', 'europe-west4')
+BUCKET_PREFIX = os.environ.get('BUCKET_PREFIX')
+
+DEST_BUCKET = f'{BUCKET_PREFIX}-ge-processed-results'
 
 # ---------------------------------------------------------------------------
 # RETRY LOGIC: If the AI model is busy or returns an error, we automatically

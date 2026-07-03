@@ -14,7 +14,7 @@ The extraction results, including processing time and a calculated confidence sc
 
 ## Data Ingestion Methods
 
-There are three ways to get PDF invoices into the `invoice-demo-raw-invoices` bucket to trigger the pipelines:
+There are three ways to get PDF invoices into the `<YOUR_BUCKET_PREFIX>-raw-invoices` bucket to trigger the pipelines:
 
 1. **Dashboard UI Simulation (Bulk Testing):** Click the "🚀 Initiate Test" button in the Streamlit dashboard to dispatch a background worker that copies 100 sample PDFs from a spare bucket into the raw bucket simultaneously. This is used to test the auto-scaling and parallel processing capabilities of the architectures.
 2. **Gmail Ingestion (Real-World Automation):** A background Cloud Function (`gmail-ingestion-cf`) continuously monitors a designated Google Workspace inbox. If it receives an unread email with "invoice" in the subject line, it automatically extracts the PDF attachment, drops it into the raw bucket, and marks the email as read.
@@ -24,7 +24,7 @@ There are three ways to get PDF invoices into the `invoice-demo-raw-invoices` bu
 
 ```mermaid
 graph TD
-    User([User / System]) -->|Uploads PDF| RawBucket[(invoice-demo-raw-invoices)]
+    User([User / System]) -->|Uploads PDF| RawBucket[(<YOUR_BUCKET_PREFIX>-raw-invoices)]
     
     RawBucket -->|Eventarc Trigger| GEM_CF[Gemini Flash Function]
     RawBucket -->|Eventarc Trigger| OS_CF[OS Ensemble Orchestrator]
@@ -46,8 +46,8 @@ graph TD
         OS_CF -->|Majority Vote Logic| OS_CF
     end
     
-    GEM_CF -->|Saves Result| GEBucket[(invoice-demo-ge-processed-results)]
-    OS_CF -->|Saves Result| OSBucket[(invoice-demo-os-processed-results)]
+    GEM_CF -->|Saves Result| GEBucket[(<YOUR_BUCKET_PREFIX>-ge-processed-results)]
+    OS_CF -->|Saves Result| OSBucket[(<YOUR_BUCKET_PREFIX>-os-processed-results)]
     
     GEBucket -.-> Dashboard[Streamlit Dashboard]
     OSBucket -.-> Dashboard
@@ -125,7 +125,14 @@ To deploy this project to your own Google Cloud environment, follow these steps:
 - `gcloud` CLI installed and authenticated.
 - Enable necessary APIs: `run.googleapis.com`, `cloudfunctions.googleapis.com`, `eventarc.googleapis.com`, `storage.googleapis.com`.
 
-### 1. Deploy the Open-Source Models
+### 1. Configuration
+Create a `.env` file at the root of the repository to configure your unique environment parameters.
+```bash
+cp .env.example .env
+```
+Edit `.env` to set your `PROJECT_ID`, `REGION`, `BUCKET_PREFIX` (must be globally unique across GCP), and `GMAIL_USER`.
+
+### 2. Deploy the Open-Source Models
 The ensemble relies on three LLMs running on Cloud Run. Run the deployment script to provision them:
 ```bash
 chmod +x scripts/deployment/deploy_oss_models.sh
@@ -145,7 +152,7 @@ chmod +x scripts/deployment/deploy.sh
 You can test the system locally or directly through the Cloud console.
 
 1. **Generate Test Invoices**: Run the included `scripts/data_generation/generate_pdf.py` script to generate sample German invoices.
-2. **End-to-End Test**: Upload a generated PDF to the `invoice-demo-raw-invoices` bucket.
+2. **End-to-End Test**: Upload a generated PDF to the `<YOUR_BUCKET_PREFIX>-raw-invoices` bucket.
 3. **View Results**: Visit the URL for your deployed `dashboard-ui` Cloud Run service to see the extraction results appear in real-time.
 
 Alternatively, you can test the OS Ensemble inference directly from your terminal (if authenticated with `gcloud`):

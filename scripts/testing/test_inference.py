@@ -1,6 +1,7 @@
 import json
 import subprocess
 import requests
+import os
 
 def get_identity_token(audience):
     result = subprocess.run(
@@ -12,7 +13,8 @@ def get_identity_token(audience):
     return result.stdout.strip()
 
 def run_test():
-    ensemble_url = "https://os-ensemble-cr-884389213001.europe-west3.run.app"
+    BUCKET_PREFIX = os.environ.get('BUCKET_PREFIX', 'invoice-demo')
+    ensemble_url = os.environ.get('ENSEMBLE_URL', 'https://os-ensemble-cr-884389213001.europe-west4.run.app')
     print(f"Fetching identity token for {ensemble_url}...")
     token = get_identity_token(ensemble_url)
     
@@ -22,7 +24,7 @@ def run_test():
     import base64
     gcs_event = {
         "name": "INV-1001.pdf",
-        "bucket": "invoice-demo-raw-invoices"
+        "bucket": f"{BUCKET_PREFIX}-raw-invoices"
     }
     
     encoded_data = base64.b64encode(json.dumps(gcs_event).encode('utf-8')).decode('utf-8')
@@ -46,7 +48,7 @@ def run_test():
     except:
         print(f"Response Text: {response.text}")
         
-    print("\nCheck Google Cloud Storage bucket 'invoice-demo-os-processed-results' for the final output!")
+    print(f"\nCheck Google Cloud Storage bucket '{BUCKET_PREFIX}-os-processed-results' for the final output!")
 
 if __name__ == "__main__":
     run_test()

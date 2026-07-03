@@ -2,8 +2,13 @@
 
 set -e
 
-PROJECT_ID="wojciech-genai-demo"
-REGION="europe-west4"
+if [ -f ../../.env ]; then
+    export $(cat ../../.env | grep -v '#' | awk '/=/ {print $1}')
+else
+    echo "Error: .env file not found in repository root. Please copy .env.example to .env and configure it."
+    exit 1
+fi
+
 REPO_NAME="llm-repo"
 
 echo "Creating Artifact Registry repository $REPO_NAME..."

@@ -4,6 +4,7 @@ import json
 import concurrent.futures
 import requests
 import google.auth
+import time
 import functions_framework
 from google.auth.transport.requests import AuthorizedSession
 from google.cloud import storage
@@ -42,11 +43,12 @@ def handle_initiate_copy():
         try:
             blob = spare_bucket.blob(blob_name)
             spare_bucket.copy_blob(blob, raw_bucket)
+            time.sleep(0.5)
         except Exception as e:
             print(f"Error copying {blob_name}: {e}")
 
     print(f"Starting copy of {len(blob_names)} invoices...")
-    with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
         list(executor.map(copy_blob_by_name, blob_names))
     print(f"Finished copying {len(blob_names)} invoices.")
     set_status("finished", "Initiating Copy")

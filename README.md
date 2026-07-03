@@ -138,7 +138,7 @@ The ensemble relies on three LLMs running on Cloud Run. Run the deployment scrip
 chmod +x scripts/deployment/deploy_oss_models.sh
 ./scripts/deployment/deploy_oss_models.sh
 ```
-*Note: This provisions NVIDIA L4 GPUs. Ensure you have the necessary regional quota.*
+*Note: This script actively downloads the heavy model weights (Gemma, Qwen, Mistral) into a custom Docker image and pushes it to your Google Cloud Artifact Registry before deploying them to Cloud Run with NVIDIA L4 GPUs. This ensures that when the Cloud Run instances scale up, they do not have to redownload the multi-gigabyte models from the internet. Ensure you have the necessary regional quota for L4 GPUs.*
 
 ### 2. Deploy Orchestrators & Functions
 Run the primary deployment script to provision the storage buckets, the Gemini Cloud Function, the OS Orchestrator, and the Streamlit dashboard:
@@ -146,6 +146,15 @@ Run the primary deployment script to provision the storage buckets, the Gemini C
 chmod +x scripts/deployment/deploy.sh
 ./scripts/deployment/deploy.sh
 ```
+
+### 3. Cleanup
+
+To destroy all deployed resources and prevent ongoing charges, run the destruction script:
+```bash
+chmod +x scripts/deployment/destroy.sh
+./scripts/deployment/destroy.sh
+```
+*Note: This script removes the core pipeline resources but leaves the Open-Source models intact. If you wish to delete the models, run: `gcloud run services delete gemma4-12b qwen3-6-27b mistral-7b --region=$REGION`*
 
 ## Testing
 

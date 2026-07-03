@@ -6,6 +6,7 @@
 # by our AI models, and displays them as metrics and expandable cards.
 # ---------------------------------------------------------------------------
 
+import os
 import streamlit as st
 import pandas as pd
 import json
@@ -13,10 +14,10 @@ from google.cloud import storage
 import concurrent.futures
 
 # Set up the basic layout of the webpage
-st.set_page_config(page_title="Document Processing Demo", layout="wide")
+st.set_page_config(page_title="Document Processing Demo", layout="wide", page_icon="📄")
 
-st.title("GitOps & Document Processing")
-st.subheader("Architecture Battlecard: Open-Source Ensemble vs. Gemini Enterprise")
+st.title("Document Processing")
+st.subheader("Open-Source Ensemble vs. Gemini Enterprise")
 
 st.markdown("""
 This dashboard compares two architectural approaches to processing inbound invoices. 
@@ -107,13 +108,25 @@ with st.sidebar:
     if is_running:
         st.warning(f"⏳ Please wait for the previous task to finish: **{task_name}**")
     elif is_finished and task_name:
-        st.success(f"✅ Task finished: **{task_name}**")
+        colA, colB = st.columns([0.8, 0.2])
+        with colA:
+            st.success(f"✅ Task finished: **{task_name}**")
+        with colB:
+            if st.button("✖️", key="dismiss_status", help="Dismiss this notification"):
+                try:
+                    storage_client = storage.Client()
+                    storage_client.bucket(f'{BUCKET_PREFIX}-spare-invoices').blob('dashboard_status.json').delete()
+                except:
+                    pass
+                st.rerun()
         
     if st.button("🚀 Initiate Test (Copy Data & Recalculate)", type="primary", help="Copies 100 invoices from spare bucket to raw bucket to trigger recalculation and processing", disabled=is_running):
         with st.spinner("Dispatching command..."):
             initiate_copy_from_spare()
         st.cache_data.clear()
         st.success("✅ Command sent! The copy process has started. Once it finishes, the backend processing pipelines will automatically begin.")
+        import time
+        time.sleep(2)
         st.rerun()
         
     if st.button("🔄 Refresh UI", type="secondary", help="Fetch the latest processing results from buckets"):
@@ -125,6 +138,8 @@ with st.sidebar:
             clear_all_data()
         st.cache_data.clear()
         st.success("🧹 Cleanup command sent to background worker! Buckets will be emptied shortly.")
+        import time
+        time.sleep(2)
         st.rerun()
 
     st.markdown("---")

@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
 
-if [ -f ../../.env ]; then
-    export $(cat ../../.env | grep -v '#' | awk '/=/ {print $1}')
+if [ -f .env ]; then
+    export $(cat .env | grep -v '#' | awk '/=/ {print $1}')
 else
     echo "Error: .env file not found in repository root. Please copy .env.example to .env and configure it."
     exit 1
@@ -75,26 +75,15 @@ gcloud eventarc triggers create os-ensemble-cr-trigger \
   --service-account=${SERVICE_ACCOUNT}
 
 echo "Deploying Dashboard Worker..."
-gcloud run deploy dashboard-worker \
-  --source=dashboard-worker \
+gcloud functions deploy dashboard-worker \
+  --gen2 \
+  --runtime=python311 \
   --region=$REGION \
+  --source=dashboard-worker \
+  --entry-point=process_command \
+  --trigger-topic=dashboard-commands \
   --no-allow-unauthenticated \
   --set-env-vars="BUCKET_PREFIX=${BUCKET_PREFIX}"
-
-echo "Granting Eventarc Service Account permission to invoke Dashboard Worker..."
-gcloud run services add-iam-policy-binding dashboard-worker \
-  --region=$REGION \
-  --member="serviceAccount:${SERVICE_ACCOUNT}" \
-  --role="roles/run.invoker"
-
-echo "Creating Eventarc Trigger for Dashboard Worker..."
-gcloud eventarc triggers create dashboard-worker-trigger \
-  --location=$REGION \
-  --destination-run-service=dashboard-worker \
-  --destination-run-region=$REGION \
-  --event-filters="type=google.cloud.pubsub.topic.v1.messagePublished" \
-  --transport-topic="projects/${PROJECT_ID}/topics/dashboard-commands" \
-  --service-account=${SERVICE_ACCOUNT}
 
 echo "Deploying Dashboard UI..."
 gcloud run deploy dashboard-ui \

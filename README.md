@@ -125,6 +125,7 @@ For those wanting to explore the code, here are the main files to look at:
 
 3. **Streamlit Dashboard:**
    - Displays real-time extraction results with interactive expanders showing individual model votes.
+   - Includes a **Raw Data Inspector**: Clicking an invoice expander reveals tabbed views separating the clean Consensus Result from the raw JSON payload and the individual model voting data.
    - Highlights confidence scores with color-coded indicators (🟢, 🟡, 🔴).
    - Allows users to simulate scale by pushing 100+ invoices simultaneously.
    - Includes an **Emergency Stop** feature to fast-fail and drain the Eventarc queue.

@@ -200,7 +200,17 @@ with col1:
             invoice_id = res.get('invoice_id', 'Unknown')
             
             with st.expander(f"{icon} {invoice_id} (Confidence: {conf*100:.0f}%)"):
-                st.json(res)
+                tab1, tab2, tab3 = st.tabs(["Consensus Result", "Raw JSON Payload", "Model Votes"])
+                with tab1:
+                    clean_res = {k:v for k,v in res.items() if k != 'model_votes'}
+                    st.json(clean_res)
+                with tab2:
+                    st.json(res)
+                with tab3:
+                    if 'model_votes' in res:
+                        st.json(res['model_votes'])
+                    else:
+                        st.info("No model votes available for this invoice.")
 
 with col2:
     st.header("Gemini Enterprise")
@@ -233,7 +243,11 @@ with col2:
             invoice_id = res.get('invoice_id', 'Unknown')
             
             with st.expander(f"{icon} {invoice_id} (Confidence: {conf*100:.0f}%)"):
-                st.json(res)
+                tab1, tab2 = st.tabs(["Clean Result", "Raw JSON Payload"])
+                with tab1:
+                    st.json(res)
+                with tab2:
+                    st.json(res)
 
 if auto_refresh:
     import time

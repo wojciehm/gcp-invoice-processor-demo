@@ -106,6 +106,13 @@ def process_invoice(cloud_event):
 
     # Step 9: Save the final JSON result back into our "processed" bucket
     storage_client = storage.Client()
+    
+    # NEW CHECK: Don't save if the user clicked Emergency Stop (file deleted)
+    raw_bucket = storage_client.bucket(bucket_name)
+    if not raw_bucket.blob(file_name).exists():
+        print(f"Skipping save: {file_name} was deleted from raw bucket.")
+        return
+
     bucket = storage_client.bucket(DEST_BUCKET)
     
     # Change the extension from .pdf to .json

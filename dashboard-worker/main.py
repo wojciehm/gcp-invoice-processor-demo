@@ -8,6 +8,8 @@ import time
 import functions_framework
 from google.auth.transport.requests import AuthorizedSession
 from google.cloud import storage
+from google.cloud import pubsub_v1
+from datetime import datetime, timezone
 
 BUCKET_PREFIX = os.environ.get('BUCKET_PREFIX')
 SPARE_BUCKET_NAME = f'{BUCKET_PREFIX}-spare-invoices'
@@ -53,6 +55,23 @@ def handle_initiate_copy():
     print(f"Finished copying {len(blob_names)} invoices.")
     set_status("finished", "Initiating Copy")
 
+def purge_pubsub_queues():
+    print("Purging Eventarc Pub/Sub queues...")
+    try:
+        subscriber = pubsub_v1.SubscriberClient()
+        project_path = f"projects/{project}"
+        for sub in subscriber.list_subscriptions(request={"project": project_path}):
+            sub_name = sub.name
+            if "eventarc-" in sub_name and "dashboard-worker" not in sub_name and "gmail" not in sub_name:
+                try:
+                    request = {"subscription": sub_name, "time": datetime.now(timezone.utc)}
+                    subscriber.seek(request=request)
+                    print(f"Purged {sub_name}")
+                except Exception as e:
+                    print(f"Failed to purge {sub_name}: {e}")
+    except Exception as e:
+        print(f"Error purging queues: {e}")
+
 def handle_kill_processing():
     set_status("running", "Emergency Stop: Emptying Queue")
     
@@ -69,6 +88,10 @@ def handle_kill_processing():
         with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
             list(executor.map(lambda b: delete_blob_by_name(b.name), blobs))
         print("Emergency stop completed. Queue cleared.")
+        
+        # ALSO PURGE PUBSUB!
+        purge_pubsub_queues()
+        
     except Exception as e:
         print(f"Error during emergency stop: {e}")
         
@@ -100,6 +123,10 @@ def handle_clear_data():
             except Exception as e:
                 print(f"Error clearing {bucket_name}: {e}")
     print("Finished cleaning up buckets.")
+    
+    # ALSO PURGE PUBSUB!
+    purge_pubsub_queues()
+    
     set_status("finished", "Clearing Data")
 
 @functions_framework.cloud_event

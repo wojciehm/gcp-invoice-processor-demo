@@ -293,6 +293,10 @@ async def process_file(file_name: str):
     }
     
     # Step 6: Save the final JSON result back to Cloud Storage
+    if not bucket.blob(file_name).exists():
+        print(f"Skipping save: {file_name} was deleted from raw bucket.")
+        return
+        
     dest_bucket = storage_client.bucket(DEST_BUCKET)
     dest_file_name = file_name.rsplit('.', 1)[0] + '.json'
     dest_blob = dest_bucket.blob(dest_file_name)

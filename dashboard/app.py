@@ -287,7 +287,5 @@ with col2:
                         st.info("No reasoning log available for this invoice.")
 
 if auto_refresh:
-    import time
-    time.sleep(5)
-    st.cache_data.clear()
-    st.rerun()
+    from streamlit_autorefresh import st_autorefresh
+    st_autorefresh(interval=5000, key="auto_refresh_timer")

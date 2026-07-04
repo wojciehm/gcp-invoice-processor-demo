@@ -220,8 +220,8 @@ with col1:
                             st.markdown(f"#### {model_name}")
                             reasoning = vote_data.pop('_reasoning', None)
                             if reasoning:
-                                with st.expander(f"🧠 View {model_name} Reasoning Log"):
-                                    st.text(reasoning)
+                                st.markdown(f"**🧠 {model_name} Reasoning Log:**")
+                                st.info(reasoning)
                             st.json(vote_data)
                     else:
                         st.info("No model votes available for this invoice.")
@@ -261,8 +261,8 @@ with col2:
                 with tab1:
                     reasoning = res.get('_reasoning')
                     if reasoning:
-                        with st.expander("🧠 View Gemini Reasoning Log"):
-                            st.text(reasoning)
+                        st.markdown("**🧠 Gemini Reasoning Log:**")
+                        st.info(reasoning)
                     
                     clean_res = {k:v for k,v in res.items() if k != '_reasoning'}
                     st.json(clean_res)

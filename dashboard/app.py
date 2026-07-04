@@ -205,15 +205,21 @@ with col1:
                     clean_res = {k:v for k,v in res.items() if k != 'model_votes'}
                     st.json(clean_res)
                 with tab2:
+                    import copy
+                    raw_res = copy.deepcopy(res)
+                    if 'model_votes' in raw_res:
+                        for mv in raw_res['model_votes'].values():
+                            mv.pop('_reasoning', None)
+                    
                     st.markdown(f"**📂 Source:** `gs://{BUCKET_PREFIX}-os-processed-results/{invoice_id}.json`")
                     st.download_button(
                         label="📥 Download Raw JSON", 
-                        data=json.dumps(res, indent=2), 
+                        data=json.dumps(raw_res, indent=2), 
                         file_name=f"{invoice_id}.json", 
                         mime="application/json",
                         key=f"dl_os_{invoice_id}"
                     )
-                    st.json(res)
+                    st.json(raw_res)
                 with tab3:
                     if 'model_votes' in res:
                         for model_name, vote_data in res['model_votes'].items():
@@ -262,15 +268,16 @@ with col2:
                     clean_res = {k:v for k,v in res.items() if k != '_reasoning'}
                     st.json(clean_res)
                 with tab2:
+                    raw_res = {k:v for k,v in res.items() if k != '_reasoning'}
                     st.markdown(f"**📂 Source:** `gs://{BUCKET_PREFIX}-ge-processed-results/{invoice_id}.json`")
                     st.download_button(
                         label="📥 Download Raw JSON", 
-                        data=json.dumps(res, indent=2), 
+                        data=json.dumps(raw_res, indent=2), 
                         file_name=f"{invoice_id}.json", 
                         mime="application/json",
                         key=f"dl_ge_{invoice_id}"
                     )
-                    st.json(res)
+                    st.json(raw_res)
                 with tab3:
                     reasoning = res.get('_reasoning')
                     if reasoning:

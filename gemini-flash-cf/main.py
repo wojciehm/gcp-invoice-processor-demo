@@ -62,7 +62,9 @@ def process_invoice(cloud_event):
 
     # Step 4: Give the AI instructions on what to extract
     prompt = """
-    Extract the following details from this invoice.
+    First, think step-by-step about where to find each field in the invoice text and clearly explain your reasoning.
+    Store your detailed reasoning in the '_reasoning' field.
+    Then, extract the following details from this invoice.
     """
 
     # Step 5: Define the exact structure (JSON) we want the AI to return.
@@ -70,13 +72,14 @@ def process_invoice(cloud_event):
     response_schema = {
         "type": "OBJECT",
         "properties": {
+            "_reasoning": {"type": "STRING", "description": "Step-by-step reasoning for extracting the values"},
             "invoice_id": {"type": "STRING"},
             "total": {"type": "INTEGER"},
             "tax": {"type": "NUMBER"},
             "issuer": {"type": "STRING"},
             "confidence": {"type": "NUMBER", "description": "Confidence score of extraction between 0.0 and 1.0"}
         },
-        "required": ["invoice_id", "total", "tax", "issuer", "confidence"]
+        "required": ["_reasoning", "invoice_id", "total", "tax", "issuer", "confidence"]
     }
 
     # Step 6: Start a timer and ask Gemini to process the document

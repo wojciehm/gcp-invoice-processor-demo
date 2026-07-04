@@ -259,7 +259,13 @@ with col2:
             with st.expander(f"{icon} {invoice_id} (Confidence: {conf*100:.0f}%)"):
                 tab1, tab2 = st.tabs(["Clean Result", "Raw JSON Payload"])
                 with tab1:
-                    st.json(res)
+                    reasoning = res.get('_reasoning')
+                    if reasoning:
+                        with st.expander("🧠 View Gemini Reasoning Log"):
+                            st.text(reasoning)
+                    
+                    clean_res = {k:v for k,v in res.items() if k != '_reasoning'}
+                    st.json(clean_res)
                 with tab2:
                     st.markdown(f"**📂 Source:** `gs://{BUCKET_PREFIX}-ge-processed-results/{invoice_id}.json`")
                     st.download_button(

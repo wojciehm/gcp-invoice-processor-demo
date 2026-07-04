@@ -18,7 +18,9 @@ import asyncio
 import json
 import time
 import os
-from fastapi import FastAPI, BackgroundTasks, Request
+import base64
+import urllib.request
+from fastapi import FastAPI, Request, HTTPException
 from google.cloud import storage
 import uvicorn
 import fitz
@@ -28,6 +30,15 @@ import google.auth.transport.requests
 import google.oauth2.id_token
 
 app = FastAPI()
+
+# Global semaphore to limit concurrent requests to the LLMs to 1
+llm_semaphore = None
+
+def get_semaphore():
+    global llm_semaphore
+    if llm_semaphore is None:
+        llm_semaphore = asyncio.Semaphore(1)
+    return llm_semaphore
 
 PROJECT_ID = os.environ.get('PROJECT_ID')
 BUCKET_PREFIX = os.environ.get('BUCKET_PREFIX')
@@ -40,15 +51,15 @@ DEST_BUCKET = f"{BUCKET_PREFIX}-os-processed-results"
 # ---------------------------------------------------------------------------
 MODEL_URLS = {
     "gemma4-12b": os.environ.get("GEMMA_URL"),
-    "qwen3-6-27b": os.environ.get("QWEN_URL"),
+    "qwen3-5-9b": os.environ.get("QWEN_URL"),
     "mistral-7b": os.environ.get("MISTRAL_URL")
 }
 
 # The specific internal names (tags) Ollama uses to identify the models
 MODEL_TAGS = {
     "gemma4-12b": "gemma4:12b",
-    "qwen3-6-27b": "qwen3.6:27b",
-    "mistral-7b": "mistral:7b"
+    "qwen3-5-9b": "qwen3.5:9b",
+    "mistral-7b": "mistral:latest"
 }
 
 # ---------------------------------------------------------------------------
@@ -121,9 +132,17 @@ async def call_model(model_key: str, pdf_text: str):
         payload = {
             "model": model_tag,
             "prompt": prompt,
-            "format": "json",
-            "stream": False
+            "stream": False,
+            "options": {
+                "temperature": 0.0,
+                "num_predict": 2048
+            }
         }
+        
+        # Thinking models (Gemma) fail with strict JSON format enforcement, but 
+        # standard models (Qwen, Mistral) benefit from it to prevent extra text.
+        if "gemma" not in model_key.lower():
+            payload["format"] = "json"
         
         # Make an HTTP request to the LLM
         async with httpx.AsyncClient(timeout=300.0) as client:
@@ -132,8 +151,36 @@ async def call_model(model_key: str, pdf_text: str):
                 print(f"Error {response.status_code} from {model_key}: {response.text}")
                 return {}
             data = response.json()
-            response_text = data.get("response", "{}")
-            return json.loads(response_text)
+            response_text = data.get("response", "")
+            thinking_text = data.get("thinking", "")
+            
+            # If response is empty or just whitespace, fallback to thinking block
+            if not response_text.strip() and thinking_text.strip():
+                response_text = thinking_text
+                
+            # Strip <think> block if present
+            if "<think>" in response_text and "</think>" in response_text:
+                response_text = response_text.split("</think>")[-1].strip()
+                
+            # If the model wrapped the output in markdown code blocks, extract it
+            if "```json" in response_text:
+                response_text = response_text.split("```json")[1].split("```")[0].strip()
+            elif "```" in response_text:
+                response_text = response_text.split("```")[1].split("```")[0].strip()
+                
+            # Clean up the response to extract just the JSON
+            if "{" in response_text and "}" in response_text:
+                start = response_text.find("{")
+                end = response_text.rfind("}") + 1
+                response_text = response_text[start:end]
+            elif not response_text.strip():
+                response_text = "{}"
+
+            try:
+                return json.loads(response_text)
+            except json.JSONDecodeError as e:
+                print(f"JSONDecodeError for {model_key}: {e}. Raw response: {response_text}")
+                return {}
             
     except Exception as e:
         print(f"Error calling {model_key}: {type(e).__name__} - {e}")
@@ -164,8 +211,8 @@ def consensus_score(results, key):
 # ---------------------------------------------------------------------------
 # CORE WORKFLOW: Downloads the PDF, queries models, votes, and saves results.
 # ---------------------------------------------------------------------------
-async def process_file_background(file_name: str):
-    print(f"Starting ensemble processing for {file_name}")
+async def process_file(file_name: str):
+    print(f"Starting ensemble processing for {file_name}", flush=True)
     start_time = time.time()
     
     # Step 1: Download the newly uploaded PDF
@@ -182,17 +229,26 @@ async def process_file_background(file_name: str):
     # Step 2: Extract text from the PDF (the "Preprocessing Overhead")
     pdf_text = extract_text_from_pdf(file_data)
     
-    # Step 3: Query all three OSS models in parallel at the same time
-    results = await asyncio.gather(
-        call_model("gemma4-12b", pdf_text),
-        call_model("qwen3-6-27b", pdf_text),
-        call_model("mistral-7b", pdf_text)
-    )
+    # Step 3: Query all three OSS models in parallel at the same time, respecting the global semaphore
+    async with get_semaphore():
+        results = await asyncio.gather(
+            call_model("gemma4-12b", pdf_text),
+            call_model("qwen3-5-9b", pdf_text),
+            call_model("mistral-7b", pdf_text)
+        )
     
     end_time = time.time()
     processing_time = round(end_time - start_time, 2)
     
-    print(f"Results before voting: {results}")
+    print(f"Results before voting: {results}", flush=True)
+    
+    # STRICT CONSENSUS VALIDATION:
+    # If any model returned an empty dictionary (e.g. 404 Cold Start), we abort!
+    valid_results = [r for r in results if r]
+    if len(valid_results) != 3:
+        error_msg = f"Strict consensus failed: Only {len(valid_results)}/3 models responded successfully. Aborting to trigger Pub/Sub retry."
+        print(error_msg, flush=True)
+        raise Exception(error_msg)
     
     # Step 4: Calculate confidence scores for every single extracted field
     scores = [
@@ -211,7 +267,12 @@ async def process_file_background(file_name: str):
         "issuer": majority_vote(results, "issuer"),
         "confidence": total_confidence,
         "processing_time_seconds": processing_time,
-        "architecture": "Open-Source Ensemble"
+        "architecture": "Open-Source Ensemble",
+        "model_votes": {
+            "gemma4-12b": results[0] if len(results) > 0 else {},
+            "qwen3-5-9b": results[1] if len(results) > 1 else {},
+            "mistral-7b": results[2] if len(results) > 2 else {}
+        }
     }
     
     # Step 6: Save the final JSON result back to Cloud Storage
@@ -219,28 +280,30 @@ async def process_file_background(file_name: str):
     dest_file_name = file_name.rsplit('.', 1)[0] + '.json'
     dest_blob = dest_bucket.blob(dest_file_name)
     dest_blob.upload_from_string(json.dumps(final_result, indent=2), content_type='application/json')
-    print(f"Ensemble processing complete for {file_name}. Saved to gs://{DEST_BUCKET}/{dest_file_name}")
+    print(f"Ensemble processing complete for {file_name}. Saved to gs://{DEST_BUCKET}/{dest_file_name}", flush=True)
 
 # ---------------------------------------------------------------------------
 # WEB SERVER: This listens for HTTP requests from Eventarc
 # ---------------------------------------------------------------------------
 @app.post("/")
-async def process_invoice(request: Request):
-    data = await request.json()
+async def receive_event(request: Request):
+    """
+    Receives Eventarc Push trigger from Cloud Storage.
+    """
+    body = await request.body()
+    data = json.loads(body)
     
-    # Extract the filename from the Eventarc payload
-    if "message" in data and "data" in data["message"]:
-        import base64
-        gcs_event = json.loads(base64.b64decode(data["message"]["data"]).decode('utf-8'))
-        file_name = gcs_event.get("name")
-    else:
-        file_name = data.get("name")
-        
+    # Extract file name from the Cloud Storage event
+    file_name = data.get("name")
     if not file_name:
         return {"status": "error", "message": "No file name found in event"}
         
-    await process_file_background(file_name)
-    return {"status": "success", "message": f"Processed {file_name}."}
+    try:
+        await process_file(file_name)
+        return {"status": "success", "message": f"Successfully processed {file_name}"}
+    except Exception as e:
+        print(f"Failing HTTP request: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8080)

@@ -42,7 +42,7 @@ graph TD
     
     subgraph "Open-Source Ensemble Architecture"
         OS_CF -->|Parallel HTTP| Model1[Cloud Run: Gemma 4 12B]:::model
-        OS_CF -->|Parallel HTTP| Model2[Cloud Run: Qwen 3.6 27B]:::model
+        OS_CF -->|Parallel HTTP| Model2[Cloud Run: Qwen 3.5 9B]:::model
         OS_CF -->|Parallel HTTP| Model3[Cloud Run: Mistral 7B]:::model
         
         Model1 -->|JSON| OS_CF
@@ -109,7 +109,7 @@ For those wanting to explore the code, here are the main files to look at:
 - **`os-ensemble-cr/app.py`**: The Cloud Run Orchestrator that receives the Eventarc trigger, extracts text using PyMuPDF, and manages the parallel HTTP requests to the 3 Open-Source LLMs, culminating in the majority-vote consensus logic.
 - **`scripts/deployment/deploy.sh`**: The master deployment script that provisions all buckets, deploys the serverless functions, and wires up the Eventarc triggers.
 - **`scripts/deployment/deploy_oss_models.sh`**: The script that provisions the three open-source LLMs (Gemma, Qwen, Mistral) on Cloud Run using NVIDIA L4 GPUs and the Ollama runtime.
-- **`dashboard/app.py`**: The Streamlit frontend that queries the output buckets and visualizes the extraction confidence, latency, and JSON results.
+- **`dashboard/app.py`**: The Streamlit frontend that queries the output buckets and visualizes the extraction confidence, latency, individual model votes, and JSON results. It also contains an **Emergency Stop** button to instantly drain the Eventarc processing queue if GPUs get overwhelmed.
 
 ## Features
 
@@ -119,14 +119,15 @@ For those wanting to explore the code, here are the main files to look at:
    - Near-instantaneous extraction latency.
 
 2. **Open-Source Ensemble Pipeline:**
-   - Uses an orchestrator Cloud Run service to invoke three parallel OSS models running on NVIDIA L4 GPUs via Ollama.
+   - Uses an orchestrator Cloud Run service to invoke three parallel OSS models running on **NVIDIA RTX 6000 GPUs** via Ollama.
    - Implements a **Consensus Mechanism** (majority vote) across all three models to calculate a confidence score and ensure data accuracy without relying on a single model.
    - Secured with `--no-allow-unauthenticated` identity tokens for internal service-to-service communication.
 
 3. **Streamlit Dashboard:**
-   - Displays real-time extraction results with interactive expanders.
+   - Displays real-time extraction results with interactive expanders showing individual model votes.
    - Highlights confidence scores with color-coded indicators (🟢, 🟡, 🔴).
    - Allows users to simulate scale by pushing 100+ invoices simultaneously.
+   - Includes an **Emergency Stop** feature to fast-fail and drain the Eventarc queue.
 
 ## Deployment
 
@@ -150,11 +151,11 @@ The ensemble relies on three LLMs running on Cloud Run. Run the deployment scrip
 chmod +x scripts/deployment/deploy_oss_models.sh
 ./scripts/deployment/deploy_oss_models.sh
 ```
-*Note: This script actively downloads the heavy model weights (Gemma, Qwen, Mistral) into a custom Docker image and pushes it to your Google Cloud Artifact Registry before deploying them to Cloud Run with NVIDIA L4 GPUs. This ensures that when the Cloud Run instances scale up, they do not have to redownload the multi-gigabyte models from the internet.*
+*Note: This script actively downloads the heavy model weights (Gemma, Qwen, Mistral) into a custom Docker image and pushes it to your Google Cloud Artifact Registry before deploying them to Cloud Run with NVIDIA RTX 6000 GPUs. This ensures that when the Cloud Run instances scale up, they do not have to redownload the multi-gigabyte models from the internet.*
 
 > [!IMPORTANT]
 > **GPU Quota & Scaling Limitations**
-> The deployment script explicitly configures `--max-instances=1` and `--gpu=1` for each of the three models. Because most default Google Cloud environments have a strict L4 GPU quota (e.g., 8 GPUs per region), limiting each model to exactly one instance prevents auto-scaling events from accidentally exceeding your region's quota during heavy traffic spikes. This ensures a safe, predictable deployment at the cost of parallel batch processing speed.
+> The deployment script explicitly configures `--min-instances=1`, `--max-instances=1`, and `--gpu=1` for each of the three models. Because GPU virtual machines experience a severe 3-5 minute "hardware cold start" penalty when scaling from 0, setting `min-instances=1` is critical to prevent startup probe timeouts. Furthermore, limiting `max-instances=1` prevents auto-scaling events from accidentally exceeding your region's GPU quota during heavy traffic spikes.
 
 ### 2. Deploy Orchestrators & Functions
 Run the primary deployment script to provision the storage buckets, the Gemini Cloud Function, the OS Orchestrator, and the Streamlit dashboard:
@@ -170,13 +171,13 @@ To destroy all deployed resources and prevent ongoing charges, run the destructi
 chmod +x scripts/deployment/destroy.sh
 ./scripts/deployment/destroy.sh
 ```
-*Note: This script removes the core pipeline resources but leaves the Open-Source models intact. If you wish to delete the models, run: `gcloud run services delete gemma4-12b qwen3-6-27b mistral-7b --region=$REGION`*
+*Note: This script removes the core pipeline resources but leaves the Open-Source models intact. If you wish to delete the models, run: `gcloud run services delete gemma4-12b qwen3-5-9b mistral-7b --region=$REGION`*
 
 ## Testing
 
 You can test the system locally or directly through the Cloud console.
 
-1. **Generate Test Invoices**: Run the included `scripts/data_generation/generate_pdf.py` script to generate sample German invoices.
+1. **Generate Test Invoices**: Run the included `scripts/data_generation/generate_pdf.py` script to generate sample German invoices. *(Note: These are explicitly truncated to 4 pages, omitting terms and signatures, to optimize Open-Source text parsing speed).*
 2. **End-to-End Test**: Upload a generated PDF to the `<YOUR_BUCKET_PREFIX>-raw-invoices` bucket.
 3. **View Results**: Visit the URL for your deployed `dashboard-ui` Cloud Run service to see the extraction results appear in real-time.
 

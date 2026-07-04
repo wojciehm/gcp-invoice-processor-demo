@@ -53,6 +53,27 @@ def handle_initiate_copy():
     print(f"Finished copying {len(blob_names)} invoices.")
     set_status("finished", "Initiating Copy")
 
+def handle_kill_processing():
+    set_status("running", "Emergency Stop: Emptying Queue")
+    
+    def delete_blob_by_name(blob_name):
+        try:
+            storage_client.bucket(RAW_BUCKET_NAME).blob(blob_name).delete()
+        except Exception as e:
+            pass
+
+    try:
+        bucket = storage_client.bucket(RAW_BUCKET_NAME)
+        blobs = list(bucket.list_blobs())
+        print(f"Emergency stop: Deleting {len(blobs)} queued invoices from raw bucket...")
+        with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
+            list(executor.map(lambda b: delete_blob_by_name(b.name), blobs))
+        print("Emergency stop completed. Queue cleared.")
+    except Exception as e:
+        print(f"Error during emergency stop: {e}")
+        
+    set_status("finished", "Emergency Stop (Queue Cleared)")
+
 def handle_clear_data():
     set_status("running", "Clearing Data")
     buckets_to_clear = [
@@ -94,6 +115,8 @@ def process_command(cloud_event):
             handle_initiate_copy()
         elif action == "clear_data":
             handle_clear_data()
+        elif action == "kill_processing":
+            handle_kill_processing()
         else:
             print(f"Unknown action received: {action}")
     except Exception as e:

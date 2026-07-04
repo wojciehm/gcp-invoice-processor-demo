@@ -94,42 +94,7 @@ def create_kreditantrag_pdf(filename, invoice_id, total, tax, issuer):
                          "Vertrages werden die Daten zur Erfüllung gesetzlicher Aufbewahrungsfristen (z.B. nach HGB und AO) "
                          "für in der Regel 10 Jahre aufbewahrt.")
 
-    # Page 5: Right of Withdrawal (Widerrufsbelehrung)
-    pdf.add_page()
-    pdf.set_font('Arial', 'B', 14)
-    pdf.cell(0, 10, 'Widerrufsbelehrung', 0, 1)
-    pdf.set_font('Arial', '', 12)
-    pdf.multi_cell(0, 6, "Widerrufsrecht\nSie können Ihre Vertragserklärung innerhalb von 14 Tagen ohne Angabe von Gründen widerrufen. "
-                         "Die Frist beginnt nach Abschluss des Vertrags, aber erst, nachdem Sie alle Pflichtangaben "
-                         "nach § 492 Abs. 2 BGB erhalten haben. Zur Wahrung der Widerrufsfrist genügt die rechtzeitige Absendung des Widerrufs.\n\n"
-                         "Der Widerruf ist zu richten an:\n"
-                         f"{issuer}\nKundenservice - Abteilung Widerruf\nPostfach 12345, 10115 Berlin\nE-Mail: widerruf@{issuer.lower().replace(' ', '')}.de\n\n"
-                         "Widerrufsfolgen\nIm Falle eines wirksamen Widerrufs sind die beiderseits empfangenen Leistungen zurückzugewähren. "
-                         "Sie haben das Darlehen spätestens innerhalb von 30 Tagen nach Absendung der Widerrufserklärung zurückzuzahlen "
-                         "und für den Zeitraum der Kapitalüberlassung den vereinbarten Sollzins zu entrichten. Die Zinsen belaufen sich "
-                         "auf einen Betrag, der tagesgenau auf Basis des im Vertrag angegebenen Sollzinssatzes berechnet wird.")
 
-    # Page 6: Signature Page
-    pdf.add_page()
-    pdf.set_font('Arial', 'B', 14)
-    pdf.cell(0, 10, 'Unterschriften', 0, 1)
-    pdf.set_font('Arial', '', 12)
-    pdf.ln(20)
-    
-    pdf.cell(0, 10, 'Ich bestätige hiermit die Richtigkeit aller Angaben, sowie den Erhalt der', 0, 1)
-    pdf.cell(0, 10, 'Allgemeinen Geschäftsbedingungen und der Widerrufsbelehrung:', 0, 1)
-    pdf.ln(30)
-    
-    pdf.cell(80, 10, '__________________________', 0, 0)
-    pdf.cell(80, 10, '__________________________', 0, 1)
-    pdf.cell(80, 10, 'Ort, Datum', 0, 0)
-    pdf.cell(80, 10, 'Unterschrift Kreditnehmer (Antragsteller 1)', 0, 1)
-    
-    pdf.ln(30)
-    pdf.cell(80, 10, '__________________________', 0, 0)
-    pdf.cell(80, 10, '__________________________', 0, 1)
-    pdf.cell(80, 10, 'Ort, Datum', 0, 0)
-    pdf.cell(80, 10, 'Unterschrift Mitantragsteller (falls zutreffend)', 0, 1)
     
     pdf.output(filename, 'F')
     print(f"Created {filename}")

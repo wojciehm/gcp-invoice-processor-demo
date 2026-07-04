@@ -82,6 +82,9 @@ def publish_command(action):
 def clear_all_data():
     publish_command("clear_data")
 
+def kill_processing():
+    publish_command("kill_processing")
+
 def initiate_copy_from_spare():
     publish_command("initiate_copy")
 
@@ -142,14 +145,19 @@ with st.sidebar:
         time.sleep(2)
         st.rerun()
 
+    if st.button("🛑 EMERGENCY STOP", type="primary", help="Instantly drains the remaining invoice queue without touching already processed data. In-flight requests will finish.", disabled=is_running):
+        with st.spinner("Dispatching emergency stop command..."):
+            kill_processing()
+        st.cache_data.clear()
+        st.success("🛑 Emergency stop command sent! The queue will be cleared momentarily.")
+        import time
+        time.sleep(2)
+        st.rerun()
+
     st.markdown("---")
     auto_refresh = st.toggle("Auto Refresh (every 5s)", value=False)
 
-if auto_refresh:
-    import time
-    time.sleep(5)
-    st.cache_data.clear()
-    st.rerun()
+
 
 os_results, ge_results, total_raw = fetch_data()
 
@@ -226,3 +234,9 @@ with col2:
             
             with st.expander(f"{icon} {invoice_id} (Confidence: {conf*100:.0f}%)"):
                 st.json(res)
+
+if auto_refresh:
+    import time
+    time.sleep(5)
+    st.cache_data.clear()
+    st.rerun()

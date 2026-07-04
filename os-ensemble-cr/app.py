@@ -117,13 +117,14 @@ async def call_model(model_key: str, pdf_text: str):
             print(f"Warning: No token generated for {model_key}")
             
         # Give the AI its instructions (the "prompt")
-        prompt = f"""Extract the following details from this invoice text:
+        prompt = f"""You are an expert data extractor. First, think step-by-step about where to find each field in the invoice text and clearly explain your reasoning.
+        After your detailed reasoning, you MUST output the final extracted data wrapped exactly in a ```json``` block.
+        
+        Extract these details:
         - invoice_id (string)
         - total (integer)
         - tax (number)
         - issuer (string)
-        
-        Return ONLY valid JSON matching this structure.
         
         Invoice Text:
         {pdf_text}
@@ -139,10 +140,8 @@ async def call_model(model_key: str, pdf_text: str):
             }
         }
         
-        # Thinking models (Gemma) fail with strict JSON format enforcement, but 
-        # standard models (Qwen, Mistral) benefit from it to prevent extra text.
-        if "gemma" not in model_key.lower():
-            payload["format"] = "json"
+        # We REMOVED payload["format"] = "json" for all models because we WANT them to 
+        # output free-text reasoning first, before outputting the json block.
         
         # Make an HTTP request to the LLM
         async with httpx.AsyncClient(timeout=300.0) as client:
@@ -172,8 +171,15 @@ async def call_model(model_key: str, pdf_text: str):
                 
             # If the model wrapped the output in markdown code blocks, extract it
             if "```json" in response_text:
+                # Capture reasoning before the block if we don't have any yet
+                pre_text = response_text.split("```json")[0].strip()
+                if pre_text and not extracted_reasoning:
+                    extracted_reasoning = pre_text
                 response_text = response_text.split("```json")[1].split("```")[0].strip()
             elif "```" in response_text:
+                pre_text = response_text.split("```")[0].strip()
+                if pre_text and not extracted_reasoning:
+                    extracted_reasoning = pre_text
                 response_text = response_text.split("```")[1].split("```")[0].strip()
                 
             # Clean up the response to extract just the JSON

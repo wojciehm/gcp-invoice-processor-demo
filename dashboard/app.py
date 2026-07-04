@@ -205,6 +205,14 @@ with col1:
                     clean_res = {k:v for k,v in res.items() if k != 'model_votes'}
                     st.json(clean_res)
                 with tab2:
+                    st.markdown(f"**📂 Source:** `gs://{BUCKET_PREFIX}-os-processed-results/{invoice_id}.json`")
+                    st.download_button(
+                        label="📥 Download Raw JSON", 
+                        data=json.dumps(res, indent=2), 
+                        file_name=f"{invoice_id}.json", 
+                        mime="application/json",
+                        key=f"dl_os_{invoice_id}"
+                    )
                     st.json(res)
                 with tab3:
                     if 'model_votes' in res:
@@ -253,6 +261,14 @@ with col2:
                 with tab1:
                     st.json(res)
                 with tab2:
+                    st.markdown(f"**📂 Source:** `gs://{BUCKET_PREFIX}-ge-processed-results/{invoice_id}.json`")
+                    st.download_button(
+                        label="📥 Download Raw JSON", 
+                        data=json.dumps(res, indent=2), 
+                        file_name=f"{invoice_id}.json", 
+                        mime="application/json",
+                        key=f"dl_ge_{invoice_id}"
+                    )
                     st.json(res)
 
 if auto_refresh:

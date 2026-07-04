@@ -34,4 +34,4 @@ gcloud storage rm --recursive gs://${BUCKET_PREFIX}-os-processed-results || true
 echo "Resource destruction complete!"
 echo "Note: The Open-Source models (Gemma, Qwen, Mistral) were not deleted by this script."
 echo "If you wish to delete them as well, run:"
-echo "gcloud run services delete gemma4-12b qwen3-6-27b mistral-7b --region=$REGION --quiet"
+echo "gcloud run services delete gemma4-12b qwen3-5-9b mistral-7b --region=$REGION --quiet"

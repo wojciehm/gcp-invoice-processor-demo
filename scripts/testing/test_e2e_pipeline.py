@@ -57,6 +57,8 @@ def run_e2e_test():
     timeout = 600
     ge_success = False
     os_success = False
+    ge_output = None
+    os_output = None
     
     for attempt in range(200):
         time.sleep(3)
@@ -70,6 +72,7 @@ def run_e2e_test():
                 if data.get('invoice_id') == invoice_id:
                     print("✅ Gemini Enterprise Pipeline: SUCCESS")
                     ge_success = True
+                    ge_output = json.dumps(data, indent=2)
                 else:
                     print(f"❌ Gemini Enterprise Pipeline: FAILED DATA VALIDATION - {data}")
                     break
@@ -83,6 +86,7 @@ def run_e2e_test():
                 if data.get('invoice_id') == invoice_id:
                     print("✅ Open-Source Ensemble Pipeline: SUCCESS")
                     os_success = True
+                    os_output = json.dumps(data, indent=2)
                 else:
                     print(f"❌ Open-Source Pipeline: FAILED DATA VALIDATION - {data}")
                     break
@@ -99,6 +103,10 @@ def run_e2e_test():
     print("\n--- TEST RESULTS ---")
     if ge_success and os_success:
         print("🎉 ALL PIPELINES PASSED!")
+        print("\n--- GEMINI ENTERPRISE OUTPUT ---")
+        print(ge_output)
+        print("\n--- OPEN-SOURCE ENSEMBLE OUTPUT ---")
+        print(os_output)
         sys.exit(0)
     else:
         if not ge_success:

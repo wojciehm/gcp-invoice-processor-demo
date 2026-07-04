@@ -54,7 +54,7 @@ gcloud functions add-iam-policy-binding gemini-flash-cf \
 
 echo "Fetching URLs for Open-Source Models..."
 GEMMA_URL=$(gcloud run services describe gemma4-12b --region=$REGION --format='value(status.url)' 2>/dev/null || echo "")
-QWEN_URL=$(gcloud run services describe qwen3-6-27b --region=$REGION --format='value(status.url)' 2>/dev/null || echo "")
+QWEN_URL=$(gcloud run services describe qwen3-5-9b --region=$REGION --format='value(status.url)' 2>/dev/null || echo "")
 MISTRAL_URL=$(gcloud run services describe mistral-7b --region=$REGION --format='value(status.url)' 2>/dev/null || echo "")
 
 if [ -z "$GEMMA_URL" ] || [ -z "$QWEN_URL" ] || [ -z "$MISTRAL_URL" ]; then
@@ -68,7 +68,8 @@ gcloud run deploy os-ensemble-cr \
   --no-allow-unauthenticated \
   --port=8080 \
   --timeout=3600s \
-  --min-instances=0 \
+  --no-cpu-throttling \
+  --max-instances=1 \
   --set-env-vars="PROJECT_ID=${PROJECT_ID},BUCKET_PREFIX=${BUCKET_PREFIX},GEMMA_URL=${GEMMA_URL},QWEN_URL=${QWEN_URL},MISTRAL_URL=${MISTRAL_URL}"
 
 echo "Granting Eventarc Service Account permission to invoke Open-Source Ensemble..."

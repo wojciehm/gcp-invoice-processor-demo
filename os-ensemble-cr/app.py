@@ -154,13 +154,21 @@ async def call_model(model_key: str, pdf_text: str):
             response_text = data.get("response", "")
             thinking_text = data.get("thinking", "")
             
+            extracted_reasoning = ""
+            
             # If response is empty or just whitespace, fallback to thinking block
             if not response_text.strip() and thinking_text.strip():
+                extracted_reasoning = thinking_text.strip()
                 response_text = thinking_text
                 
             # Strip <think> block if present
             if "<think>" in response_text and "</think>" in response_text:
+                extracted_reasoning = response_text.split("</think>")[0].replace("<think>", "").strip()
                 response_text = response_text.split("</think>")[-1].strip()
+                
+            # If Ollama provided thinking natively but no <think> tags were used, capture it
+            if not extracted_reasoning and thinking_text:
+                extracted_reasoning = thinking_text.strip()
                 
             # If the model wrapped the output in markdown code blocks, extract it
             if "```json" in response_text:
@@ -177,7 +185,10 @@ async def call_model(model_key: str, pdf_text: str):
                 response_text = "{}"
 
             try:
-                return json.loads(response_text)
+                parsed_json = json.loads(response_text)
+                if extracted_reasoning:
+                    parsed_json["_reasoning"] = extracted_reasoning
+                return parsed_json
             except json.JSONDecodeError as e:
                 print(f"JSONDecodeError for {model_key}: {e}. Raw response: {response_text}")
                 return {}

@@ -208,7 +208,13 @@ with col1:
                     st.json(res)
                 with tab3:
                     if 'model_votes' in res:
-                        st.json(res['model_votes'])
+                        for model_name, vote_data in res['model_votes'].items():
+                            st.markdown(f"#### {model_name}")
+                            reasoning = vote_data.pop('_reasoning', None)
+                            if reasoning:
+                                with st.expander(f"🧠 View {model_name} Reasoning Log"):
+                                    st.text(reasoning)
+                            st.json(vote_data)
                     else:
                         st.info("No model votes available for this invoice.")
 

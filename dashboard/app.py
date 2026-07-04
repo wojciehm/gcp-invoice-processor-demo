@@ -257,13 +257,8 @@ with col2:
             invoice_id = res.get('invoice_id', 'Unknown')
             
             with st.expander(f"{icon} {invoice_id} (Confidence: {conf*100:.0f}%)"):
-                tab1, tab2 = st.tabs(["Clean Result", "Raw JSON Payload"])
+                tab1, tab2, tab3 = st.tabs(["Clean Result", "Raw JSON Payload", "Model Reasoning"])
                 with tab1:
-                    reasoning = res.get('_reasoning')
-                    if reasoning:
-                        st.markdown("**🧠 Gemini Reasoning Log:**")
-                        st.info(reasoning)
-                    
                     clean_res = {k:v for k,v in res.items() if k != '_reasoning'}
                     st.json(clean_res)
                 with tab2:
@@ -276,6 +271,13 @@ with col2:
                         key=f"dl_ge_{invoice_id}"
                     )
                     st.json(res)
+                with tab3:
+                    reasoning = res.get('_reasoning')
+                    if reasoning:
+                        st.markdown("**🧠 Gemini Reasoning Log:**")
+                        st.info(reasoning)
+                    else:
+                        st.info("No reasoning log available for this invoice.")
 
 if auto_refresh:
     import time

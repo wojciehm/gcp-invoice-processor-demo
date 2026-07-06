@@ -186,3 +186,19 @@ Alternatively, you can test the OS Ensemble inference directly from your termina
 ```bash
 python3 scripts/testing/test_inference.py
 ```
+
+To run 10 end-to-end tests automatically and ensure bucket clearing before the run, use:
+```bash
+./scripts/testing/run_10_tests.sh
+```
+
+To test the specific LLMs directly:
+```bash
+python3 scripts/testing/test_llm.py
+```
+
+To apply probe fixes or update Cloud Run jobs directly, utilize the scripts provided in `scripts/deployment`:
+```bash
+./scripts/deployment/fix_model_probes.sh
+./scripts/deployment/update_job.sh
+```

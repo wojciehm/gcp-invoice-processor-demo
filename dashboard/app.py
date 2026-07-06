@@ -78,7 +78,7 @@ TOPIC_ID = "dashboard-commands"
 BUCKET_PREFIX = os.environ.get('BUCKET_PREFIX')
 
 @st.cache_data(ttl=5)
-def fetch_data(refresh_count=0):
+def fetch_data():
     os_bucket = storage_client.bucket(f'{BUCKET_PREFIX}-os-processed-results')
     ge_bucket = storage_client.bucket(f'{BUCKET_PREFIX}-ge-processed-results')
     raw_bucket = storage_client.bucket(f'{BUCKET_PREFIX}-raw-invoices')
@@ -195,12 +195,27 @@ with st.sidebar:
     st.markdown("---")
     auto_refresh = st.toggle("Auto Refresh (every 5s)", value=False)
 
-refresh_count = 0
 if auto_refresh:
-    from streamlit_autorefresh import st_autorefresh
-    refresh_count = st_autorefresh(interval=5000, limit=100000, key="auto_refresh_timer")
+    import streamlit.components.v1 as components
+    components.html(
+        """
+        <script>
+        setTimeout(function() {
+            const buttons = window.parent.document.querySelectorAll('button');
+            for (const button of buttons) {
+                if (button.innerText.includes('Refresh UI')) {
+                    button.click();
+                    break;
+                }
+            }
+        }, 5000);
+        </script>
+        """,
+        height=0,
+        width=0,
+    )
 
-os_results, ge_results, total_raw = fetch_data(refresh_count)
+os_results, ge_results, total_raw = fetch_data()
 
 os_avg_time = sum([r.get('processing_time_seconds', 0) for r in os_results]) / len(os_results) if os_results else 0
 ge_avg_time = sum([r.get('processing_time_seconds', 0) for r in ge_results]) / len(ge_results) if ge_results else 0

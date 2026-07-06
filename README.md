@@ -23,12 +23,13 @@ There are three ways to get PDF invoices into the `<YOUR_BUCKET_PREFIX>-raw-invo
 ## Architecture
 
 ```mermaid
-graph TD
-    classDef user fill:#f9f,stroke:#333,stroke-width:2px;
-    classDef bucket fill:#f96,stroke:#333,stroke-width:2px;
-    classDef compute fill:#bbf,stroke:#333,stroke-width:2px;
-    classDef model fill:#dfd,stroke:#333,stroke-width:2px;
-    classDef dashboard fill:#ff9,stroke:#333,stroke-width:2px;
+flowchart TD
+    %% Modern Sleek Styling
+    classDef user fill:#1E88E5,stroke:#0D47A1,stroke-width:2px,color:#fff,rx:8,ry:8;
+    classDef bucket fill:#FFB300,stroke:#FF6F00,stroke-width:2px,color:#000,rx:8,ry:8;
+    classDef compute fill:#43A047,stroke:#1B5E20,stroke-width:2px,color:#fff,rx:8,ry:8;
+    classDef model fill:#8E24AA,stroke:#4A148C,stroke-width:2px,color:#fff,rx:8,ry:8;
+    classDef dashboard fill:#E53935,stroke:#b71c1c,stroke-width:2px,color:#fff,rx:8,ry:8;
 
     User([User / System]):::user -->|Uploads PDF| RawBucket[(<YOUR_BUCKET_PREFIX>-raw-invoices)]:::bucket
     
@@ -73,12 +74,13 @@ By leveraging **Google Cloud Functions (gen2)** for the Gemini pipeline, we elim
 ## Pipeline Flow Comparison
 
 ```mermaid
-graph LR
-    classDef bucket fill:#f96,stroke:#333,stroke-width:2px;
-    classDef compute fill:#bbf,stroke:#333,stroke-width:2px;
-    classDef model fill:#dfd,stroke:#333,stroke-width:2px;
-    classDef logic fill:#eee,stroke:#333,stroke-width:2px;
-    classDef result fill:#ff9,stroke:#333,stroke-width:2px;
+flowchart LR
+    %% Modern Sleek Styling
+    classDef bucket fill:#FFB300,stroke:#FF6F00,stroke-width:2px,color:#000,rx:8,ry:8;
+    classDef compute fill:#43A047,stroke:#1B5E20,stroke-width:2px,color:#fff,rx:8,ry:8;
+    classDef model fill:#8E24AA,stroke:#4A148C,stroke-width:2px,color:#fff,rx:8,ry:8;
+    classDef logic fill:#546E7A,stroke:#263238,stroke-width:2px,color:#fff,rx:8,ry:8;
+    classDef result fill:#1E88E5,stroke:#0D47A1,stroke-width:2px,color:#fff,rx:8,ry:8;
 
     subgraph "Gemini Enterprise (Cloud Function)"
         direction LR
